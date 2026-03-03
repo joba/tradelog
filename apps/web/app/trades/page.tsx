@@ -5,15 +5,41 @@ import { useQuery } from "@tanstack/react-query";
 import { tradesApi } from "@/lib/queries";
 import AppLayout from "@/components/layout/AppLayout";
 import TradeRow from "@/components/trades/TradeRow";
-import { Card, CardHeader, CardTitle, Button, Select, Input, Spinner, EmptyState, Badge } from "@/components/ui";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  Button,
+  Select,
+  Input,
+  Spinner,
+  EmptyState,
+  Badge,
+} from "@/components/ui";
 import Link from "next/link";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { TradeFilters } from "@/lib/queries";
 
-const COLS = ["", "Ticker", "Dir", "Type", "Entry Time", "Entry $", "Exit $", "P&L", "Result", ""];
+const COLS = [
+  "",
+  "Ticker",
+  "Dir",
+  "Type",
+  "Entry Time",
+  "Entry",
+  "Exit",
+  "P&L",
+  "Result",
+  "",
+];
 
 export default function TradesPage() {
-  const [filters, setFilters] = useState<TradeFilters>({ sort: "entryAt", order: "desc", page: 1, limit: 50 });
+  const [filters, setFilters] = useState<TradeFilters>({
+    sort: "entryAt",
+    order: "desc",
+    page: 1,
+    limit: 50,
+  });
   const [showFilters, setShowFilters] = useState(false);
   const [tickerInput, setTickerInput] = useState("");
 
@@ -31,8 +57,15 @@ export default function TradesPage() {
     setTickerInput("");
   };
 
-  const activeFilterCount = [filters.status, filters.direction, filters.tradeType, filters.assetClass, filters.ticker, filters.from, filters.to]
-    .filter(Boolean).length;
+  const activeFilterCount = [
+    filters.status,
+    filters.direction,
+    filters.tradeType,
+    filters.assetClass,
+    filters.ticker,
+    filters.from,
+    filters.to,
+  ].filter(Boolean).length;
 
   return (
     <AppLayout>
@@ -40,8 +73,12 @@ export default function TradesPage() {
         {/* Header */}
         <div className="flex items-center justify-between animate-fade-in">
           <div>
-            <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-1">Trade Log</div>
-            <h1 className="text-xl font-semibold text-terminal-bright tracking-wide">All Trades</h1>
+            <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-1">
+              Trade Log
+            </div>
+            <h1 className="text-xl font-semibold text-terminal-bright tracking-wide">
+              All Trades
+            </h1>
           </div>
           <Link href="/log-trade">
             <Button>+ Log Trade</Button>
@@ -53,7 +90,10 @@ export default function TradesPage() {
           <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
             {/* Ticker search */}
             <div className="relative">
-              <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-terminal-dim" />
+              <Search
+                size={11}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-terminal-dim"
+              />
               <Input
                 placeholder="Search ticker..."
                 value={tickerInput}
@@ -79,20 +119,31 @@ export default function TradesPage() {
             </button>
 
             {activeFilterCount > 0 && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-terminal-dim hover:text-loss transition-colors">
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-xs text-terminal-dim hover:text-loss transition-colors"
+              >
                 <X size={10} /> Clear
               </button>
             )}
 
             <div className="ml-auto flex items-center gap-2">
               <span className="text-[10px] text-terminal-dim">Sort:</span>
-              <Select value={filters.sort} onChange={(e) => setFilter("sort", e.target.value)} className="py-1 text-xs w-28">
+              <Select
+                value={filters.sort}
+                onChange={(e) => setFilter("sort", e.target.value)}
+                className="py-1 text-xs w-28"
+              >
                 <option value="entryAt">Entry Date</option>
                 <option value="exitAt">Exit Date</option>
                 <option value="pnl">P&L</option>
                 <option value="ticker">Ticker</option>
               </Select>
-              <Select value={filters.order} onChange={(e) => setFilter("order", e.target.value)} className="py-1 text-xs w-20">
+              <Select
+                value={filters.order}
+                onChange={(e) => setFilter("order", e.target.value)}
+                className="py-1 text-xs w-20"
+              >
                 <option value="desc">Desc</option>
                 <option value="asc">Asc</option>
               </Select>
@@ -102,45 +153,87 @@ export default function TradesPage() {
           {showFilters && (
             <div className="px-4 py-3 border-t border-terminal-border grid grid-cols-2 md:grid-cols-4 gap-3">
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">Status</div>
-                <Select value={filters.status || ""} onChange={(e) => setFilter("status", e.target.value)} className="py-1.5 text-xs">
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  Status
+                </div>
+                <Select
+                  value={filters.status || ""}
+                  onChange={(e) => setFilter("status", e.target.value)}
+                  className="py-1.5 text-xs"
+                >
                   <option value="">All</option>
                   <option value="OPEN">Open</option>
                   <option value="CLOSED">Closed</option>
                 </Select>
               </div>
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">Direction</div>
-                <Select value={filters.direction || ""} onChange={(e) => setFilter("direction", e.target.value)} className="py-1.5 text-xs">
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  Direction
+                </div>
+                <Select
+                  value={filters.direction || ""}
+                  onChange={(e) => setFilter("direction", e.target.value)}
+                  className="py-1.5 text-xs"
+                >
                   <option value="">All</option>
                   <option value="LONG">Long</option>
                   <option value="SHORT">Short</option>
                 </Select>
               </div>
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">Type</div>
-                <Select value={filters.tradeType || ""} onChange={(e) => setFilter("tradeType", e.target.value)} className="py-1.5 text-xs">
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  Type
+                </div>
+                <Select
+                  value={filters.tradeType || ""}
+                  onChange={(e) => setFilter("tradeType", e.target.value)}
+                  className="py-1.5 text-xs"
+                >
                   <option value="">All</option>
                   <option value="DAY">Day</option>
                   <option value="SWING">Swing</option>
                 </Select>
               </div>
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">Asset</div>
-                <Select value={filters.assetClass || ""} onChange={(e) => setFilter("assetClass", e.target.value)} className="py-1.5 text-xs">
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  Asset
+                </div>
+                <Select
+                  value={filters.assetClass || ""}
+                  onChange={(e) => setFilter("assetClass", e.target.value)}
+                  className="py-1.5 text-xs"
+                >
                   <option value="">All</option>
-                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map((a) => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
+                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map(
+                    (a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ),
+                  )}
                 </Select>
               </div>
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">From</div>
-                <Input type="date" value={filters.from || ""} onChange={(e) => setFilter("from", e.target.value)} className="py-1.5 text-xs" />
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  From
+                </div>
+                <Input
+                  type="date"
+                  value={filters.from || ""}
+                  onChange={(e) => setFilter("from", e.target.value)}
+                  className="py-1.5 text-xs"
+                />
               </div>
               <div>
-                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">To</div>
-                <Input type="date" value={filters.to || ""} onChange={(e) => setFilter("to", e.target.value)} className="py-1.5 text-xs" />
+                <div className="text-[10px] text-terminal-dim uppercase tracking-widest mb-1.5">
+                  To
+                </div>
+                <Input
+                  type="date"
+                  value={filters.to || ""}
+                  onChange={(e) => setFilter("to", e.target.value)}
+                  className="py-1.5 text-xs"
+                />
               </div>
             </div>
           )}
@@ -150,16 +243,24 @@ export default function TradesPage() {
         <Card className="animate-fade-in">
           <CardHeader>
             <CardTitle>
-              {data ? `${data.pagination.total} Trade${data.pagination.total !== 1 ? "s" : ""}` : "Trades"}
+              {data
+                ? `${data.pagination.total} Trade${data.pagination.total !== 1 ? "s" : ""}`
+                : "Trades"}
             </CardTitle>
           </CardHeader>
 
           {isLoading ? (
-            <div className="flex justify-center py-16"><Spinner /></div>
+            <div className="flex justify-center py-16">
+              <Spinner />
+            </div>
           ) : !data?.data.length ? (
             <EmptyState
               title="No trades match your filters"
-              action={<Button variant="outline" onClick={clearFilters}>Clear Filters</Button>}
+              action={
+                <Button variant="outline" onClick={clearFilters}>
+                  Clear Filters
+                </Button>
+              }
             />
           ) : (
             <>
@@ -168,7 +269,10 @@ export default function TradesPage() {
                   <thead>
                     <tr className="border-b border-terminal-border">
                       {COLS.map((h) => (
-                        <th key={h} className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium whitespace-nowrap">
+                        <th
+                          key={h}
+                          className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium whitespace-nowrap"
+                        >
                           {h}
                         </th>
                       ))}
@@ -191,14 +295,18 @@ export default function TradesPage() {
                   <div className="flex gap-1.5">
                     <Button
                       variant="outline"
-                      onClick={() => setFilters((p) => ({ ...p, page: (p.page || 1) - 1 }))}
+                      onClick={() =>
+                        setFilters((p) => ({ ...p, page: (p.page || 1) - 1 }))
+                      }
                       disabled={(filters.page || 1) <= 1}
                     >
                       ← Prev
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => setFilters((p) => ({ ...p, page: (p.page || 1) + 1 }))}
+                      onClick={() =>
+                        setFilters((p) => ({ ...p, page: (p.page || 1) + 1 }))
+                      }
                       disabled={(filters.page || 1) >= data.pagination.pages}
                     >
                       Next →

@@ -5,8 +5,20 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradesApi, tagsApi } from "@/lib/queries";
 import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardHeader, CardTitle, CardBody, Input, Select, Textarea, Label, Button, Badge } from "@/components/ui";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardBody,
+  Input,
+  Select,
+  Textarea,
+  Label,
+  Button,
+  Badge,
+} from "@/components/ui";
 import { CheckCircle } from "lucide-react";
+import { AssetClass, Direction, TradeType } from "@/types";
 
 const toLocalDatetimeInput = (date: Date) => {
   const pad = (n: number) => n.toString().padStart(2, "0");
@@ -16,13 +28,16 @@ const toLocalDatetimeInput = (date: Date) => {
 export default function LogTradePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: tags } = useQuery({ queryKey: ["tags"], queryFn: () => tagsApi.list().then((r) => r.data) });
+  const { data: tags } = useQuery({
+    queryKey: ["tags"],
+    queryFn: () => tagsApi.list().then((r) => r.data),
+  });
 
   const [form, setForm] = useState({
     ticker: "",
-    assetClass: "STOCK",
-    direction: "LONG",
-    tradeType: "DAY",
+    assetClass: "STOCK" as AssetClass,
+    direction: "LONG" as Direction,
+    tradeType: "DAY" as TradeType,
     quantity: "",
     entryPrice: "",
     exitPrice: "",
@@ -66,16 +81,19 @@ export default function LogTradePage() {
       }, 1500);
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      const msg = (err as { response?: { data?: { error?: string } } })
+        ?.response?.data?.error;
       setError(msg || "Failed to log trade");
     },
   });
 
-  const set = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
+  const set = (key: string, val: string) =>
+    setForm((p) => ({ ...p, [key]: val }));
 
-  const toggleTag = (id: string) => setSelectedTags((prev) =>
-    prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-  );
+  const toggleTag = (id: string) =>
+    setSelectedTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,8 +106,12 @@ export default function LogTradePage() {
       <AppLayout>
         <div className="flex flex-col items-center justify-center py-24 gap-4 animate-fade-in">
           <CheckCircle size={32} className="text-profit" />
-          <div className="text-terminal-bright font-medium tracking-wide">Trade Logged Successfully</div>
-          <div className="text-xs text-terminal-dim">Redirecting to trade log...</div>
+          <div className="text-terminal-bright font-medium tracking-wide">
+            Trade Logged Successfully
+          </div>
+          <div className="text-xs text-terminal-dim">
+            Redirecting to trade log...
+          </div>
         </div>
       </AppLayout>
     );
@@ -99,14 +121,20 @@ export default function LogTradePage() {
     <AppLayout>
       <div className="max-w-2xl space-y-4 animate-fade-in">
         <div>
-          <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-1">New Entry</div>
-          <h1 className="text-xl font-semibold text-terminal-bright tracking-wide">Log Trade</h1>
+          <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-1">
+            New Entry
+          </div>
+          <h1 className="text-xl font-semibold text-terminal-bright tracking-wide">
+            Log Trade
+          </h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Instrument */}
           <Card>
-            <CardHeader><CardTitle>Instrument</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Instrument</CardTitle>
+            </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="ticker">Ticker *</Label>
@@ -121,10 +149,18 @@ export default function LogTradePage() {
               </div>
               <div>
                 <Label htmlFor="assetClass">Asset Class</Label>
-                <Select id="assetClass" value={form.assetClass} onChange={(e) => set("assetClass", e.target.value)}>
-                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map((a) => (
-                    <option key={a} value={a}>{a}</option>
-                  ))}
+                <Select
+                  id="assetClass"
+                  value={form.assetClass}
+                  onChange={(e) => set("assetClass", e.target.value)}
+                >
+                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map(
+                    (a) => (
+                      <option key={a} value={a}>
+                        {a}
+                      </option>
+                    ),
+                  )}
                 </Select>
               </div>
               <div>
@@ -172,46 +208,110 @@ export default function LogTradePage() {
 
           {/* Execution */}
           <Card>
-            <CardHeader><CardTitle>Execution</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Execution</CardTitle>
+            </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="quantity">Quantity *</Label>
-                <Input id="quantity" type="number" step="any" value={form.quantity} onChange={(e) => set("quantity", e.target.value)} placeholder="100" required />
+                <Input
+                  id="quantity"
+                  type="number"
+                  step="any"
+                  value={form.quantity}
+                  onChange={(e) => set("quantity", e.target.value)}
+                  placeholder="100"
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="fees">Fees / Commission</Label>
-                <Input id="fees" type="number" step="any" value={form.fees} onChange={(e) => set("fees", e.target.value)} placeholder="0.00" />
+                <Input
+                  id="fees"
+                  type="number"
+                  step="any"
+                  value={form.fees}
+                  onChange={(e) => set("fees", e.target.value)}
+                  placeholder="0.00"
+                />
               </div>
               <div>
                 <Label htmlFor="entryPrice">Entry Price *</Label>
-                <Input id="entryPrice" type="number" step="any" value={form.entryPrice} onChange={(e) => set("entryPrice", e.target.value)} placeholder="0.00" required />
+                <Input
+                  id="entryPrice"
+                  type="number"
+                  step="any"
+                  value={form.entryPrice}
+                  onChange={(e) => set("entryPrice", e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
               </div>
               <div>
-                <Label htmlFor="exitPrice">Exit Price <span className="text-terminal-dim/60 normal-case">(leave blank if open)</span></Label>
-                <Input id="exitPrice" type="number" step="any" value={form.exitPrice} onChange={(e) => set("exitPrice", e.target.value)} placeholder="0.00" />
+                <Label htmlFor="exitPrice">
+                  Exit Price{" "}
+                  <span className="text-terminal-dim/60 normal-case">
+                    (leave blank if open)
+                  </span>
+                </Label>
+                <Input
+                  id="exitPrice"
+                  type="number"
+                  step="any"
+                  value={form.exitPrice}
+                  onChange={(e) => set("exitPrice", e.target.value)}
+                  placeholder="0.00"
+                />
               </div>
               <div>
                 <Label htmlFor="entryAt">Entry Time *</Label>
-                <Input id="entryAt" type="datetime-local" value={form.entryAt} onChange={(e) => set("entryAt", e.target.value)} required />
+                <Input
+                  id="entryAt"
+                  type="datetime-local"
+                  value={form.entryAt}
+                  onChange={(e) => set("entryAt", e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="exitAt">Exit Time</Label>
-                <Input id="exitAt" type="datetime-local" value={form.exitAt} onChange={(e) => set("exitAt", e.target.value)} />
+                <Input
+                  id="exitAt"
+                  type="datetime-local"
+                  value={form.exitAt}
+                  onChange={(e) => set("exitAt", e.target.value)}
+                />
               </div>
             </CardBody>
           </Card>
 
           {/* Risk management */}
           <Card>
-            <CardHeader><CardTitle>Risk Management</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Risk Management</CardTitle>
+            </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="stopLoss">Stop Loss</Label>
-                <Input id="stopLoss" type="number" step="any" value={form.stopLoss} onChange={(e) => set("stopLoss", e.target.value)} placeholder="0.00" />
+                <Input
+                  id="stopLoss"
+                  type="number"
+                  step="any"
+                  value={form.stopLoss}
+                  onChange={(e) => set("stopLoss", e.target.value)}
+                  placeholder="0.00"
+                />
               </div>
               <div>
                 <Label htmlFor="takeProfit">Take Profit</Label>
-                <Input id="takeProfit" type="number" step="any" value={form.takeProfit} onChange={(e) => set("takeProfit", e.target.value)} placeholder="0.00" />
+                <Input
+                  id="takeProfit"
+                  type="number"
+                  step="any"
+                  value={form.takeProfit}
+                  onChange={(e) => set("takeProfit", e.target.value)}
+                  placeholder="0.00"
+                />
               </div>
             </CardBody>
           </Card>
@@ -219,7 +319,9 @@ export default function LogTradePage() {
           {/* Tags */}
           {tags && tags.length > 0 && (
             <Card>
-              <CardHeader><CardTitle>Tags</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>Tags</CardTitle>
+              </CardHeader>
               <CardBody>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
@@ -229,9 +331,15 @@ export default function LogTradePage() {
                       onClick={() => toggleTag(tag.id)}
                       className="px-2.5 py-1 text-xs border rounded-sm transition-all"
                       style={{
-                        borderColor: selectedTags.includes(tag.id) ? (tag.color || "#4d9fff") : "#1c2230",
-                        color: selectedTags.includes(tag.id) ? (tag.color || "#4d9fff") : "#5a6a82",
-                        background: selectedTags.includes(tag.id) ? `${tag.color || "#4d9fff"}15` : "transparent",
+                        borderColor: selectedTags.includes(tag.id)
+                          ? tag.color || "#4d9fff"
+                          : "#1c2230",
+                        color: selectedTags.includes(tag.id)
+                          ? tag.color || "#4d9fff"
+                          : "#5a6a82",
+                        background: selectedTags.includes(tag.id)
+                          ? `${tag.color || "#4d9fff"}15`
+                          : "transparent",
                       }}
                     >
                       {tag.name}
@@ -244,7 +352,9 @@ export default function LogTradePage() {
 
           {/* Notes */}
           <Card>
-            <CardHeader><CardTitle>Notes & Rationale</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Notes & Rationale</CardTitle>
+            </CardHeader>
             <CardBody>
               <Textarea
                 value={form.notes}
@@ -256,14 +366,24 @@ export default function LogTradePage() {
           </Card>
 
           {error && (
-            <div className="text-xs text-loss bg-loss/5 border border-loss/20 rounded-sm px-3 py-2">{error}</div>
+            <div className="text-xs text-loss bg-loss/5 border border-loss/20 rounded-sm px-3 py-2">
+              {error}
+            </div>
           )}
 
           <div className="flex gap-3">
-            <Button type="submit" className="flex-1 justify-center py-3" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              className="flex-1 justify-center py-3"
+              disabled={mutation.isPending}
+            >
               {mutation.isPending ? "Logging..." : "Log Trade"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+            >
               Cancel
             </Button>
           </div>
