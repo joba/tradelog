@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -24,7 +24,7 @@ html { scroll-behavior: smooth; }
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Scrollbar */
@@ -82,7 +82,7 @@ body {
   background: var(--color-muted);
   border: 1px solid var(--color-border);
   color: var(--color-bright);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: 'Inter', sans-serif;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .terminal-input:focus {

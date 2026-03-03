@@ -8,8 +8,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        mono: ["'IBM Plex Mono'", "monospace"],
-        sans: ["'DM Sans'", "sans-serif"],
+        mono: ["'Inter'", "monospace"],
+        sans: ["'Inter'", "sans-serif"],
       },
       colors: {
         terminal: {
@@ -38,19 +38,26 @@ module.exports = {
         },
       },
       backgroundImage: {
-        "scanline": "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px)",
+        scanline:
+          "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px)",
       },
       animation: {
         "fade-in": "fadeIn 0.4s ease forwards",
         "slide-up": "slideUp 0.3s ease forwards",
-        "blink": "blink 1s step-end infinite",
-        "ticker": "ticker 20s linear infinite",
+        blink: "blink 1s step-end infinite",
+        ticker: "ticker 20s linear infinite",
       },
       keyframes: {
         fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
-        slideUp: { from: { opacity: 0, transform: "translateY(12px)" }, to: { opacity: 1, transform: "translateY(0)" } },
+        slideUp: {
+          from: { opacity: 0, transform: "translateY(12px)" },
+          to: { opacity: 1, transform: "translateY(0)" },
+        },
         blink: { "0%, 100%": { opacity: 1 }, "50%": { opacity: 0 } },
-        ticker: { from: { transform: "translateX(0)" }, to: { transform: "translateX(-50%)" } },
+        ticker: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
       },
     },
   },
