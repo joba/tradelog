@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #0a0c0f;
+  --color-surface: #0f1217;
+  --color-border: #1c2230;
+  --color-muted: #1e2535;
+  --color-text: #c8d4e8;
+  --color-dim: #5a6a82;
+  --color-bright: #e8f0fc;
+  --color-profit: #00c896;
+  --color-loss: #ff4b6e;
+  --color-accent: #4d9fff;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-dim); }
+
+/* Selection */
+::selection { background: rgba(77, 159, 255, 0.2); color: var(--color-bright); }
+
+/* Scanline overlay on surfaces */
+.scanline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.008) 2px,
+    rgba(255,255,255,0.008) 4px
+  );
+  pointer-events: none;
+}
+
+/* Glow effects */
+.glow-profit { text-shadow: 0 0 20px rgba(0, 200, 150, 0.4); }
+.glow-loss { text-shadow: 0 0 20px rgba(255, 75, 110, 0.4); }
+.glow-accent { text-shadow: 0 0 20px rgba(77, 159, 255, 0.4); }
+
+/* Border glow */
+.border-glow-profit { box-shadow: 0 0 0 1px rgba(0, 200, 150, 0.3), 0 0 20px rgba(0, 200, 150, 0.05); }
+.border-glow-loss { box-shadow: 0 0 0 1px rgba(255, 75, 110, 0.3), 0 0 20px rgba(255, 75, 110, 0.05); }
+.border-glow-accent { box-shadow: 0 0 0 1px rgba(77, 159, 255, 0.3), 0 0 20px rgba(77, 159, 255, 0.05); }
+
+/* Stat card hover */
+.stat-card {
+  transition: all 0.2s ease;
+}
+.stat-card:hover {
+  background: #131823;
+  transform: translateY(-1px);
+}
+
+/* Table row hover */
+.trade-row {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--color-border);
+}
+.trade-row:hover { background: rgba(77, 159, 255, 0.03); }
+
+/* Input focus ring */
+.terminal-input {
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  color: var(--color-bright);
+  font-family: 'IBM Plex Mono', monospace;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.terminal-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px rgba(77,159,255,0.2);
+}
+
+/* Cursor blink */
+.cursor::after {
+  content: '▮';
+  animation: blink 1s step-end infinite;
+  color: var(--color-accent);
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+
+/* Staggered children */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }

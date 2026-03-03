@@ -1,0 +1,180 @@
+// Trade Journal - Prisma Schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+  // Default output (node_modules) works fine on Vercel.
+  // The `build` script runs `prisma generate` before each deploy.
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hashed; omit if using Clerk/Auth0
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trades    Trade[]
+  tags      Tag[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// CORE TRADE
+// ─────────────────────────────────────────
+
+model Trade {
+  id          String      @id @default(uuid())
+  userId      String
+
+  // Instrument
+  ticker      String      // e.g. "AAPL", "BTC/USD"
+  assetClass  AssetClass  @default(STOCK)
+
+  // Direction & Type
+  direction   Direction   // LONG or SHORT
+  tradeType   TradeType   // DAY or SWING
+
+  // Position sizing
+  quantity    Decimal     @db.Decimal(18, 8)  // supports crypto fractional shares
+  entryPrice  Decimal     @db.Decimal(18, 8)
+  exitPrice   Decimal?    @db.Decimal(18, 8)  // null = trade still open
+
+  // Timing
+  entryAt     DateTime
+  exitAt      DateTime?
+
+  // Risk management (optional but useful for R:R stats)
+  stopLoss    Decimal?    @db.Decimal(18, 8)
+  takeProfit  Decimal?    @db.Decimal(18, 8)
+
+  // Costs
+  fees        Decimal     @default(0) @db.Decimal(18, 8)
+
+  // Derived fields (stored for query performance)
+  pnl         Decimal?    @db.Decimal(18, 8)  // computed on close
+  pnlPercent  Decimal?    @db.Decimal(8, 4)
+  riskReward  Decimal?    @db.Decimal(8, 4)   // actual R:R at close
+
+  // Status
+  status      TradeStatus @default(OPEN)
+  outcome     Outcome?    // WIN / LOSS / BREAKEVEN — set on close
+
+  // Meta
+  notes       String?
+  screenshot  String?     // URL to image (S3, Cloudinary, etc.)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags        TradeTag[]
+  executions  Execution[] // for scaling in/out (advanced)
+
+  @@index([userId])
+  @@index([ticker])
+  @@index([entryAt])
+  @@index([status])
+  @@map("trades")
+}
+
+// ─────────────────────────────────────────
+// EXECUTIONS (scaling in/out — optional)
+// Allows logging partial fills for a single trade
+// ─────────────────────────────────────────
+
+model Execution {
+  id        String          @id @default(uuid())
+  tradeId   String
+  type      ExecutionType   // ENTRY or EXIT
+  price     Decimal         @db.Decimal(18, 8)
+  quantity  Decimal         @db.Decimal(18, 8)
+  fees      Decimal         @default(0) @db.Decimal(18, 8)
+  executedAt DateTime
+
+  trade     Trade           @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+
+  @@index([tradeId])
+  @@map("executions")
+}
+
+// ─────────────────────────────────────────
+// TAGS
+// User-defined labels: strategy, sector, setup, etc.
+// ─────────────────────────────────────────
+
+model Tag {
+  id        String     @id @default(uuid())
+  userId    String
+  name      String     // e.g. "Breakout", "Tech", "Earnings Play"
+  color     String?    // hex color for UI display
+  createdAt DateTime   @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trades    TradeTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+// Join table for Trade <-> Tag (many-to-many)
+model TradeTag {
+  tradeId String
+  tagId   String
+
+  trade   Trade  @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tradeId, tagId])
+  @@map("trade_tags")
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum AssetClass {
+  STOCK
+  OPTION
+  CRYPTO
+  FOREX
+  FUTURES
+  ETF
+}
+
+enum Direction {
+  LONG
+  SHORT
+}
+
+enum TradeType {
+  DAY
+  SWING
+}
+
+enum TradeStatus {
+  OPEN
+  CLOSED
+}
+
+enum Outcome {
+  WIN
+  LOSS
+  BREAKEVEN
+}
+
+enum ExecutionType {
+  ENTRY
+  EXIT
+}
