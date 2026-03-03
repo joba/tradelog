@@ -12,11 +12,11 @@ export function fmt(value: number | null | undefined, decimals = 2): string {
 export function fmtCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   const abs = Math.abs(value);
-  const formatted = new Intl.NumberFormat("en-US", {
+  const formatted = new Intl.NumberFormat("sv-SE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(abs);
-  return (value < 0 ? "-$" : "$") + formatted;
+  return (value < 0 ? "-" : "") + formatted + " kr";
 }
 
 export function fmtPercent(value: number | null | undefined): string {
@@ -26,16 +26,20 @@ export function fmtPercent(value: number | null | undefined): string {
 
 export function fmtDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+  return new Date(dateStr).toLocaleDateString("sv-SE", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 }
 
 export function fmtDateTime(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString("en-US", {
-    month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
+  return new Date(dateStr).toLocaleString("sv-SE", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 

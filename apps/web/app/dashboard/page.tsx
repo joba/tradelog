@@ -6,7 +6,16 @@ import { fmtCurrency, fmtPercent } from "@/lib/utils";
 import AppLayout from "@/components/layout/AppLayout";
 import EquityCurve from "@/components/charts/EquityCurve";
 import TradeRow from "@/components/trades/TradeRow";
-import { StatCell, Card, CardHeader, CardTitle, Spinner, EmptyState, Badge, Button } from "@/components/ui";
+import {
+  StatCell,
+  Card,
+  CardHeader,
+  CardTitle,
+  Spinner,
+  EmptyState,
+  Badge,
+  Button,
+} from "@/components/ui";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { TrendingUp, TrendingDown, Activity, Target } from "lucide-react";
@@ -17,26 +26,36 @@ function SummaryStats() {
     queryFn: () => statsApi.summary().then((r) => r.data),
   });
 
-  if (isLoading) return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-20 bg-terminal-surface border border-terminal-border rounded-sm animate-pulse" />
-      ))}
-    </div>
-  );
+  if (isLoading)
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-20 bg-terminal-surface border border-terminal-border rounded-sm animate-pulse"
+          />
+        ))}
+      </div>
+    );
 
-  if (!data || data.totalTrades === 0) return (
-    <div className="bg-terminal-surface border border-terminal-border rounded-sm px-5 py-4 text-sm text-terminal-dim">
-      No closed trades yet — <Link href="/log-trade" className="text-accent underline">log your first trade</Link>
-    </div>
-  );
+  if (!data || data.totalTrades === 0)
+    return (
+      <div className="bg-terminal-surface border border-terminal-border rounded-sm px-5 py-4 text-sm text-terminal-dim">
+        No closed trades yet —{" "}
+        <Link href="/log-trade" className="text-accent underline">
+          log your first trade
+        </Link>
+      </div>
+    );
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
       <StatCell
         label="Total P&L"
         value={fmtCurrency(data.totalPnl)}
-        valueClass={data.totalPnl >= 0 ? "text-profit glow-profit" : "text-loss glow-loss"}
+        valueClass={
+          data.totalPnl >= 0 ? "text-profit glow-profit" : "text-loss glow-loss"
+        }
         className="animate-fade-in"
       />
       <StatCell
@@ -54,7 +73,11 @@ function SummaryStats() {
       <StatCell
         label="Profit Factor"
         value={data.profitFactor !== null ? data.profitFactor.toFixed(2) : "—"}
-        valueClass={data.profitFactor && data.profitFactor >= 1 ? "text-profit" : "text-loss"}
+        valueClass={
+          data.profitFactor && data.profitFactor >= 1
+            ? "text-profit"
+            : "text-loss"
+        }
         className="animate-fade-in"
       />
       <StatCell
@@ -88,7 +111,10 @@ function SummaryStats() {
 function RecentTrades() {
   const { data, isLoading } = useQuery({
     queryKey: ["trades", { limit: 5, sort: "entryAt", order: "desc" }],
-    queryFn: () => tradesApi.list({ limit: 5, sort: "entryAt", order: "desc" }).then((r) => r.data),
+    queryFn: () =>
+      tradesApi
+        .list({ limit: 5, sort: "entryAt", order: "desc" })
+        .then((r) => r.data),
   });
 
   return (
@@ -96,16 +122,24 @@ function RecentTrades() {
       <CardHeader>
         <CardTitle>Recent Trades</CardTitle>
         <Link href="/trades">
-          <Button variant="ghost" className="text-[10px]">View All ›</Button>
+          <Button variant="ghost" className="text-[10px]">
+            View All ›
+          </Button>
         </Link>
       </CardHeader>
       {isLoading ? (
-        <div className="flex justify-center py-10"><Spinner /></div>
+        <div className="flex justify-center py-10">
+          <Spinner />
+        </div>
       ) : !data?.data.length ? (
         <EmptyState
           title="No trades logged yet"
           description="Start tracking your trades"
-          action={<Link href="/log-trade"><Button>Log Trade</Button></Link>}
+          action={
+            <Link href="/log-trade">
+              <Button>Log Trade</Button>
+            </Link>
+          }
         />
       ) : (
         <div className="overflow-x-auto">
@@ -113,8 +147,21 @@ function RecentTrades() {
             <thead>
               <tr className="border-b border-terminal-border">
                 <th className="px-3 py-2 w-4" />
-                {["Ticker", "Dir", "Type", "Entry", "Entry $", "Exit $", "P&L", "Result", ""].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium">
+                {[
+                  "Ticker",
+                  "Dir",
+                  "Type",
+                  "Entry",
+                  "Entry $",
+                  "Exit $",
+                  "P&L",
+                  "Result",
+                  "",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium"
+                  >
                     {h}
                   </th>
                 ))}
@@ -142,10 +189,17 @@ export default function DashboardPage() {
         <div className="flex items-end justify-between animate-fade-in">
           <div>
             <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-1">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              {new Date().toLocaleDateString("sv-SE", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
             </div>
             <h1 className="text-xl font-semibold text-terminal-bright tracking-wide">
-              {user?.name ? `${user.name.split(" ")[0]}'s Dashboard` : "Dashboard"}
+              {user?.name
+                ? `${user.name.split(" ")[0]}'s Dashboard`
+                : "Dashboard"}
             </h1>
           </div>
           <Link href="/log-trade">
