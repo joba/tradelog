@@ -14,10 +14,12 @@ dotenv.config();
 const app = express();
 
 // ─── Middleware ───────────────────────────────────────────────
-app.use(cors({
-  origin: process.env.CLIENT_URL || "*",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 // Only log in development — Vercel has its own request logging
@@ -26,10 +28,10 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // ─── Routes ──────────────────────────────────────────────────
-app.use("/api/auth",   authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/trades", tradeRoutes);
-app.use("/api/stats",  statsRoutes);
-app.use("/api/tags",   tagRoutes);
+app.use("/api/stats", statsRoutes);
+app.use("/api/tags", tagRoutes);
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
