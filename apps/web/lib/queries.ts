@@ -29,7 +29,7 @@ export const tradesApi = {
     api.post<Trade>("/trades", data),
   update: (id: string, data: Partial<Trade> & { tagIds?: string[] }) =>
     api.put<Trade>(`/trades/${id}`, data),
-  close: (id: string, data: { exitPrice: number; exitAt?: string; fees?: number }) =>
+  close: (id: string, data: { exitPrice: number; exitAt?: string; fees?: number; fxRate?: number }) =>
     api.patch<Trade>(`/trades/${id}/close`, data),
   delete: (id: string) => api.delete(`/trades/${id}`),
 };

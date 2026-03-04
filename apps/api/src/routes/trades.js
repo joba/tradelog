@@ -26,6 +26,8 @@ const tradeBodyValidators = [
   body("screenshot").optional({ nullable: true }).isURL(),
   body("tagIds").optional().isArray(),
   body("tagIds.*").optional().isUUID(),
+  body("currency").optional().isIn(["SEK", "USD"]),
+  body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
 ];
 
 // ─── GET /api/trades ──────────────────────────────────────────
@@ -130,11 +132,14 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds = [],
+      currency = "SEK", fxRate,
     } = req.body;
+
+    const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
 
     // Compute derived fields if closing immediately
     const derived = exitPrice
-      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit })
+      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit, fxRate: effectiveFxRate })
       : {};
 
     const trade = await prisma.trade.create({
@@ -145,6 +150,8 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
         exitAt: exitAt ? new Date(exitAt) : undefined,
         stopLoss, takeProfit, fees: Number(fees),
         notes, screenshot,
+        currency,
+        fxRate: currency === "USD" ? effectiveFxRate : null,
         status: exitPrice ? "CLOSED" : "OPEN",
         ...derived,
         tags: {
@@ -177,10 +184,13 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds,
+      currency = "SEK", fxRate,
     } = req.body;
 
+    const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
+
     const derived = exitPrice
-      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit })
+      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit, fxRate: effectiveFxRate })
       : { pnl: null, pnlPercent: null, riskReward: null, outcome: null };
 
     const trade = await prisma.trade.update({
@@ -192,6 +202,8 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
         exitAt: exitAt ? new Date(exitAt) : null,
         stopLoss, takeProfit, fees: Number(fees),
         notes, screenshot,
+        currency,
+        fxRate: currency === "USD" ? effectiveFxRate : null,
         status: exitPrice ? "CLOSED" : "OPEN",
         ...derived,
         // Replace tags if provided
@@ -221,6 +233,7 @@ router.patch(
     body("exitPrice").isFloat({ gt: 0 }),
     body("exitAt").optional().isISO8601(),
     body("fees").optional().isFloat({ min: 0 }),
+    body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
   ],
   async (req, res, next) => {
     try {
@@ -233,8 +246,11 @@ router.patch(
       if (!trade) return res.status(404).json({ error: "Trade not found" });
       if (trade.status === "CLOSED") return res.status(400).json({ error: "Trade already closed" });
 
-      const { exitPrice, exitAt, fees } = req.body;
+      const { exitPrice, exitAt, fees, fxRate } = req.body;
       const totalFees = fees !== undefined ? Number(fees) : Number(trade.fees);
+
+      // For USD trades use the provided close-time rate; for SEK trades fxRate is always 1
+      const effectiveFxRate = trade.currency === "USD" ? (fxRate || 1) : 1;
 
       const derived = computePnl({
         direction: trade.direction,
@@ -244,6 +260,7 @@ router.patch(
         fees: totalFees,
         stopLoss: trade.stopLoss ? Number(trade.stopLoss) : null,
         takeProfit: trade.takeProfit ? Number(trade.takeProfit) : null,
+        fxRate: effectiveFxRate,
       });
 
       const updated = await prisma.trade.update({
@@ -252,6 +269,7 @@ router.patch(
           exitPrice: Number(exitPrice),
           exitAt: exitAt ? new Date(exitAt) : new Date(),
           fees: totalFees,
+          fxRate: trade.currency === "USD" ? effectiveFxRate : null,
           status: "CLOSED",
           ...derived,
         },

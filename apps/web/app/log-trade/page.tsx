@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradesApi, tagsApi } from "@/lib/queries";
@@ -17,8 +17,14 @@ import {
   Button,
   Badge,
 } from "@/components/ui";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, RefreshCw } from "lucide-react";
 import { AssetClass, Direction, TradeType } from "@/types";
+
+async function fetchUsdSekRate(): Promise<number> {
+  const res = await fetch("https://api.frankfurter.app/latest?from=USD&to=SEK");
+  const data = await res.json();
+  return data.rates.SEK as number;
+}
 
 const toLocalDatetimeInput = (date: Date) => {
   const pad = (n: number) => n.toString().padStart(2, "0");
@@ -49,8 +55,32 @@ export default function LogTradePage() {
     notes: "",
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [currency, setCurrency] = useState<"SEK" | "USD">("SEK");
+  const [fxRate, setFxRate] = useState<number | null>(null);
+  const [fetchingRate, setFetchingRate] = useState(false);
+  const [rateError, setRateError] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const refreshRate = useCallback(async () => {
+    setFetchingRate(true);
+    setRateError("");
+    try {
+      const rate = await fetchUsdSekRate();
+      setFxRate(rate);
+    } catch {
+      setRateError("Could not fetch rate — enter manually");
+    } finally {
+      setFetchingRate(false);
+    }
+  }, []);
+
+  const handleCurrencyChange = async (c: "SEK" | "USD") => {
+    setCurrency(c);
+    if (c === "USD" && fxRate === null) {
+      await refreshRate();
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -69,6 +99,8 @@ export default function LogTradePage() {
         fees: Number(form.fees),
         notes: form.notes || undefined,
         tagIds: selectedTags,
+        currency,
+        fxRate: currency === "USD" ? (fxRate ?? undefined) : undefined,
       };
       return tradesApi.create(payload).then((r) => r.data);
     },
@@ -212,6 +244,56 @@ export default function LogTradePage() {
               <CardTitle>Execution</CardTitle>
             </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label>Currency</Label>
+                <div className="flex gap-2 mt-1">
+                  {(["SEK", "USD"] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleCurrencyChange(c)}
+                      className={`px-4 py-2 text-xs border rounded-sm transition-all ${
+                        currency === c
+                          ? "bg-accent/10 border-accent/40 text-accent"
+                          : "bg-terminal-muted border-terminal-border text-terminal-dim hover:text-terminal-text"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                  {currency === "USD" && (
+                    <div className="flex items-center gap-2 ml-2 text-xs text-terminal-dim">
+                      {fetchingRate ? (
+                        <span className="text-terminal-dim/60">Fetching rate…</span>
+                      ) : rateError ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-loss/80">{rateError}</span>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={fxRate ?? ""}
+                            onChange={(e) => setFxRate(Number(e.target.value))}
+                            className="terminal-input px-2 py-1 text-xs w-20 rounded-sm"
+                            placeholder="10.52"
+                          />
+                        </div>
+                      ) : fxRate !== null ? (
+                        <div className="flex items-center gap-1.5">
+                          <span>1 USD = <span className="text-terminal-text tabular-nums">{fxRate.toFixed(4)}</span> SEK</span>
+                          <button
+                            type="button"
+                            onClick={refreshRate}
+                            className="text-terminal-dim/60 hover:text-accent transition-colors"
+                            title="Refresh rate"
+                          >
+                            <RefreshCw size={11} />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
+              </div>
               <div>
                 <Label htmlFor="quantity">Quantity *</Label>
                 <Input

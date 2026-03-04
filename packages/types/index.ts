@@ -1,8 +1,15 @@
-export type AssetClass = "STOCK" | "OPTION" | "CRYPTO" | "FOREX" | "FUTURES" | "ETF";
+export type AssetClass =
+  | "STOCK"
+  | "OPTION"
+  | "CRYPTO"
+  | "FOREX"
+  | "FUTURES"
+  | "ETF";
 export type Direction = "LONG" | "SHORT";
 export type TradeType = "DAY" | "SWING";
 export type TradeStatus = "OPEN" | "CLOSED";
 export type Outcome = "WIN" | "LOSS" | "BREAKEVEN";
+export type Currency = "USD" | "SEK";
 
 export interface Tag {
   id: string;
@@ -30,6 +37,8 @@ export interface Trade {
   riskReward: number | null;
   status: TradeStatus;
   outcome: Outcome | null;
+  currency: Currency;
+  fxRate: number | null;
   notes: string | null;
   screenshot: string | null;
   createdAt: string;

@@ -10,21 +10,20 @@ export function computePnl({
   fees,
   stopLoss,
   takeProfit,
+  fxRate = 1,
 }) {
   const qty = Number(quantity);
   const entry = Number(entryPrice);
   const exit = Number(exitPrice);
   const totalFees = Number(fees) || 0;
+  const rate = Number(fxRate) || 1;
 
-  // Raw P&L before fees
-  // const rawPnl = direction === "LONG"
-  //   ? (exit - entry) * qty
-  //   : (entry - exit) * qty;
-
-  // Always calculate as LONG, as its optimized for bull/bear assets
+  // Raw P&L before fees (in original currency)
+  // Always calculate as LONG, as its optimized for bull/bear assets (not the underlying asset direction)
   const rawPnl = (exit - entry) * qty;
 
-  const pnl = rawPnl - totalFees;
+  // Convert to SEK using fxRate (1 for SEK trades)
+  const pnl = (rawPnl - totalFees) * rate;
   const pnlPercent = (rawPnl / (entry * qty)) * 100;
 
   // Outcome

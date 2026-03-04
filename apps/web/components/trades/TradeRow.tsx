@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { tradesApi } from "@/lib/queries";
-import { fmtCurrency, fmtDateTime, fmtPercent, fmtDate } from "@/lib/utils";
+import { fmtCurrency, fmtDateTime, fmtPercent } from "@/lib/utils";
 import { Badge, Button } from "@/components/ui";
 import { Trash2, ChevronDown, ChevronRight, X } from "lucide-react";
 import type { Trade } from "@tradelog/types";
+
+function fmtPrice(value: number, currency: string): string {
+  if (currency === "USD") return `$${value.toFixed(2)}`;
+  return fmtCurrency(value);
+}
 
 function outcomeVariant(o: string | null) {
   if (o === "WIN") return "profit";
@@ -23,8 +28,27 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
   const queryClient = useQueryClient();
   const [exitPrice, setExitPrice] = useState("");
   const [fees, setFees] = useState(String(trade.fees || ""));
+  const [fxRate, setFxRate] = useState<number | null>(null);
+  const [fetchingRate, setFetchingRate] = useState(false);
+
+  const isUsd = trade.currency === "USD";
+
+  useEffect(() => {
+    if (!isUsd) return;
+    setFetchingRate(true);
+    fetch("https://api.frankfurter.app/latest?from=USD&to=SEK")
+      .then((r) => r.json())
+      .then((d) => setFxRate(d.rates.SEK as number))
+      .catch(() => {/* user can type manually */})
+      .finally(() => setFetchingRate(false));
+  }, [isUsd]);
+
   const mutation = useMutation({
-    mutationFn: () => tradesApi.close(trade.id, { exitPrice: Number(exitPrice), fees: Number(fees) }),
+    mutationFn: () => tradesApi.close(trade.id, {
+      exitPrice: Number(exitPrice),
+      fees: Number(fees),
+      ...(isUsd && fxRate !== null ? { fxRate } : {}),
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trades"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
@@ -40,7 +64,9 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
       onClick={(e) => e.stopPropagation()}
     >
       <div>
-        <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">Exit Price</div>
+        <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">
+          Exit Price {isUsd && <span className="text-accent">USD</span>}
+        </div>
         <input
           type="number"
           step="any"
@@ -63,6 +89,19 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
           placeholder="0.00"
         />
       </div>
+      {isUsd && (
+        <div>
+          <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">USD/SEK Rate</div>
+          <input
+            type="number"
+            step="0.0001"
+            value={fxRate ?? ""}
+            onChange={(e) => setFxRate(Number(e.target.value))}
+            className="terminal-input px-2 py-1 text-xs w-20 rounded-sm"
+            placeholder={fetchingRate ? "…" : "10.52"}
+          />
+        </div>
+      )}
       <div className="flex items-end gap-1 pb-0.5 mt-4">
         <Button type="submit" disabled={mutation.isPending} variant="primary" className="py-1 text-[10px]">
           {mutation.isPending ? "..." : "Close"}
@@ -118,10 +157,10 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           {fmtDateTime(trade.entryAt)}
         </td>
         <td className="px-3 py-2.5 text-xs tabular-nums">
-          {fmtCurrency(Number(trade.entryPrice))}
+          {fmtPrice(Number(trade.entryPrice), trade.currency)}
         </td>
         <td className="px-3 py-2.5 text-xs tabular-nums">
-          {trade.exitPrice ? fmtCurrency(Number(trade.exitPrice)) : (
+          {trade.exitPrice ? fmtPrice(Number(trade.exitPrice), trade.currency) : (
             <span className="text-accent text-[10px] cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); setClosing(true); }}>
               Close ›
             </span>
@@ -161,11 +200,11 @@ export default function TradeRow({ trade }: { trade: Trade }) {
               </div>
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Stop Loss</span>
-                <span className="text-loss tabular-nums">{trade.stopLoss ? fmtCurrency(Number(trade.stopLoss)) : "—"}</span>
+                <span className="text-loss tabular-nums">{trade.stopLoss ? fmtPrice(Number(trade.stopLoss), trade.currency) : "—"}</span>
               </div>
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Take Profit</span>
-                <span className="text-profit tabular-nums">{trade.takeProfit ? fmtCurrency(Number(trade.takeProfit)) : "—"}</span>
+                <span className="text-profit tabular-nums">{trade.takeProfit ? fmtPrice(Number(trade.takeProfit), trade.currency) : "—"}</span>
               </div>
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">R:R</span>
@@ -173,8 +212,16 @@ export default function TradeRow({ trade }: { trade: Trade }) {
               </div>
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Fees</span>
-                <span className="text-terminal-dim tabular-nums">{fmtCurrency(Number(trade.fees))}</span>
+                <span className="text-terminal-dim tabular-nums">{fmtPrice(Number(trade.fees), trade.currency)}</span>
               </div>
+              {trade.currency === "USD" && (
+                <div>
+                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Currency</span>
+                  <span className="text-terminal-text tabular-nums">
+                    USD {trade.fxRate ? <span className="text-terminal-dim">({Number(trade.fxRate).toFixed(4)} kr)</span> : null}
+                  </span>
+                </div>
+              )}
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Exit</span>
                 <span className="text-terminal-dim tabular-nums">{fmtDateTime(trade.exitAt)}</span>

@@ -35,3 +35,6 @@ npm-debug.log*
 .idea/
 .vscode/
 *.swp
+
+# Claude Code (local settings are machine-specific)
+.claude/
