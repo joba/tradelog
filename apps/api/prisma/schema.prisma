@@ -72,7 +72,7 @@ model Trade {
   outcome     Outcome?    // WIN / LOSS / BREAKEVEN — set on close
 
   // Currency
-  currency    Currency    @default("SEK")      // "SEK" | "USD"
+  currency    Currency    @default(SEK)      // "SEK" | "USD"
   fxRate      Decimal?    @db.Decimal(10, 4)   // USD→SEK rate at trade time; null for SEK trades
 
   // Meta
