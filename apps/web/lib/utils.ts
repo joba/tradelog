@@ -43,7 +43,7 @@ export function fmtDateTime(dateStr: string | null | undefined): string {
   });
 }
 
-export const DOW_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export const DOW_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function fmtHour(h: number): string {
   if (h === 0) return "12am";

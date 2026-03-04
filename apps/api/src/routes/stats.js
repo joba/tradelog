@@ -28,7 +28,9 @@ const commonFilters = [
   query("from").optional().isISO8601(),
   query("to").optional().isISO8601(),
   query("tradeType").optional().isIn(["DAY", "SWING"]),
-  query("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
+  query("assetClass")
+    .optional()
+    .isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
 ];
 
 // ─── GET /api/stats/summary ───────────────────────────────────
@@ -37,13 +39,20 @@ const commonFilters = [
 router.get("/summary", commonFilters, async (req, res, next) => {
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty())
+      return res.status(400).json({ errors: errors.array() });
 
     const where = buildBaseWhere(req.userId, req.query);
 
     const trades = await prisma.trade.findMany({
       where,
-      select: { pnl: true, pnlPercent: true, riskReward: true, outcome: true, fees: true },
+      select: {
+        pnl: true,
+        pnlPercent: true,
+        riskReward: true,
+        outcome: true,
+        fees: true,
+      },
     });
 
     if (trades.length === 0) {
@@ -61,17 +70,29 @@ router.get("/summary", commonFilters, async (req, res, next) => {
     const totalPnl = pnlValues.reduce((a, b) => a + b, 0);
     const avgPnl = totalPnl / totalTrades;
 
-    const winPnls = trades.filter((t) => t.outcome === "WIN").map((t) => Number(t.pnl));
-    const lossPnls = trades.filter((t) => t.outcome === "LOSS").map((t) => Number(t.pnl));
+    const winPnls = trades
+      .filter((t) => t.outcome === "WIN")
+      .map((t) => Number(t.pnl));
+    const lossPnls = trades
+      .filter((t) => t.outcome === "LOSS")
+      .map((t) => Number(t.pnl));
 
-    const avgWin = winPnls.length ? winPnls.reduce((a, b) => a + b, 0) / winPnls.length : 0;
-    const avgLoss = lossPnls.length ? lossPnls.reduce((a, b) => a + b, 0) / lossPnls.length : 0;
+    const avgWin = winPnls.length
+      ? winPnls.reduce((a, b) => a + b, 0) / winPnls.length
+      : 0;
+    const avgLoss = lossPnls.length
+      ? lossPnls.reduce((a, b) => a + b, 0) / lossPnls.length
+      : 0;
     const profitFactor = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : null;
 
     const totalFees = trades.reduce((a, t) => a + Number(t.fees), 0);
 
-    const rrValues = trades.filter((t) => t.riskReward !== null).map((t) => Number(t.riskReward));
-    const avgRR = rrValues.length ? rrValues.reduce((a, b) => a + b, 0) / rrValues.length : null;
+    const rrValues = trades
+      .filter((t) => t.riskReward !== null)
+      .map((t) => Number(t.riskReward));
+    const avgRR = rrValues.length
+      ? rrValues.reduce((a, b) => a + b, 0) / rrValues.length
+      : null;
 
     // Largest win and loss
     const largestWin = winPnls.length ? Math.max(...winPnls) : 0;
@@ -158,7 +179,9 @@ router.get("/by-ticker", commonFilters, async (req, res, next) => {
       _count: { id: true },
     });
 
-    const winMap = Object.fromEntries(winCounts.map((w) => [w.ticker, w._count.id]));
+    const winMap = Object.fromEntries(
+      winCounts.map((w) => [w.ticker, w._count.id]),
+    );
 
     const data = groups.map((g) => {
       const total = g._count.id;
@@ -171,7 +194,10 @@ router.get("/by-ticker", commonFilters, async (req, res, next) => {
         winRate: +((wins / total) * 100).toFixed(2),
         totalPnl: +Number(g._sum.pnl).toFixed(2),
         avgPnl: +Number(g._avg.pnl).toFixed(2),
-        avgRR: g._avg.riskReward !== null ? +Number(g._avg.riskReward).toFixed(2) : null,
+        avgRR:
+          g._avg.riskReward !== null
+            ? +Number(g._avg.riskReward).toFixed(2)
+            : null,
         totalFees: +Number(g._sum.fees).toFixed(2),
       };
     });
@@ -197,7 +223,9 @@ router.get("/by-tag", commonFilters, async (req, res, next) => {
         outcome: true,
         riskReward: true,
         fees: true,
-        tags: { select: { tag: { select: { id: true, name: true, color: true } } } },
+        tags: {
+          select: { tag: { select: { id: true, name: true, color: true } } },
+        },
       },
     });
 
@@ -215,7 +243,9 @@ router.get("/by-tag", commonFilters, async (req, res, next) => {
       const total = trades.length;
       const wins = trades.filter((t) => t.outcome === "WIN").length;
       const totalPnl = trades.reduce((a, t) => a + Number(t.pnl), 0);
-      const rrValues = trades.filter((t) => t.riskReward).map((t) => Number(t.riskReward));
+      const rrValues = trades
+        .filter((t) => t.riskReward)
+        .map((t) => Number(t.riskReward));
       return {
         tagId: id,
         tagName: name,
@@ -226,7 +256,9 @@ router.get("/by-tag", commonFilters, async (req, res, next) => {
         winRate: +((wins / total) * 100).toFixed(2),
         totalPnl: +totalPnl.toFixed(2),
         avgPnl: +(totalPnl / total).toFixed(2),
-        avgRR: rrValues.length ? +(rrValues.reduce((a, b) => a + b, 0) / rrValues.length).toFixed(2) : null,
+        avgRR: rrValues.length
+          ? +(rrValues.reduce((a, b) => a + b, 0) / rrValues.length).toFixed(2)
+          : null,
       };
     });
 
@@ -250,10 +282,20 @@ router.get("/by-time", commonFilters, async (req, res, next) => {
       select: { entryAt: true, pnl: true, outcome: true },
     });
 
-    // Day of week: 0=Sun, 1=Mon, ... 6=Sat
-    const byDow = buildTimeBuckets(trades, (t) => new Date(t.entryAt).getDay(), 0, 6);
+    // Day of week: 0=Mon, 1=Tue, ... 6=Sun (converted from getDay)
+    const byDow = buildTimeBuckets(
+      trades,
+      (t) => (new Date(t.entryAt).getDay() + 6) % 7,
+      0,
+      6,
+    );
     // Hour of day: 0–23
-    const byHour = buildTimeBuckets(trades, (t) => new Date(t.entryAt).getHours(), 0, 23);
+    const byHour = buildTimeBuckets(
+      trades,
+      (t) => new Date(t.entryAt).getHours(),
+      0,
+      23,
+    );
 
     res.json({
       byDayOfWeek: byDow,
@@ -281,7 +323,9 @@ function buildTimeBuckets(trades, keyFn, min, max) {
     key: Number(key),
     totalTrades: b.trades.length,
     wins: b.wins,
-    winRate: b.trades.length ? +((b.wins / b.trades.length) * 100).toFixed(2) : 0,
+    winRate: b.trades.length
+      ? +((b.wins / b.trades.length) * 100).toFixed(2)
+      : 0,
     totalPnl: +b.totalPnl.toFixed(2),
     avgPnl: b.trades.length ? +(b.totalPnl / b.trades.length).toFixed(2) : 0,
   }));
