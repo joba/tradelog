@@ -176,9 +176,9 @@ export function StatCell({ label, value, className, valueClass }: {
   label: string; value: ReactNode; className?: string; valueClass?: string;
 }) {
   return (
-    <div className={cn("stat-card flex flex-col gap-1 p-4 bg-terminal-surface border border-terminal-border rounded-sm", className)}>
+    <div className={cn("stat-card flex flex-col gap-1 p-3 md:p-4 bg-terminal-surface border border-terminal-border rounded-sm", className)}>
       <span className="text-[10px] tracking-widest uppercase text-terminal-dim">{label}</span>
-      <span className={cn("text-xl font-semibold tabular-nums", valueClass)}>{value}</span>
+      <span className={cn("text-base md:text-xl font-semibold tabular-nums", valueClass)}>{value}</span>
     </div>
   );
 }

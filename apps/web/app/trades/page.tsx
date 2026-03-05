@@ -30,7 +30,7 @@ const COLS = [
   "Exit",
   "P&L",
   "Result",
-  "",
+  "-",
 ];
 
 export default function TradesPage() {
@@ -87,7 +87,7 @@ export default function TradesPage() {
 
         {/* Filter bar */}
         <Card className="animate-fade-in">
-          <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
+          <div className="px-4 py-3 flex flex-wrap items-center gap-2">
             {/* Ticker search */}
             <div className="relative">
               <Search
@@ -101,7 +101,7 @@ export default function TradesPage() {
                   setTickerInput(e.target.value.toUpperCase());
                   setFilter("ticker", e.target.value.toUpperCase());
                 }}
-                className="pl-7 w-36 py-1.5 text-xs"
+                className="pl-7 w-32 py-1.5 text-xs"
               />
             </div>
 
@@ -127,12 +127,14 @@ export default function TradesPage() {
               </button>
             )}
 
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-[10px] text-terminal-dim">Sort:</span>
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-[10px] text-terminal-dim hidden sm:inline">
+                Sort:
+              </span>
               <Select
                 value={filters.sort}
                 onChange={(e) => setFilter("sort", e.target.value)}
-                className="py-1 text-xs w-28"
+                className="py-1 text-xs"
               >
                 <option value="entryAt">Entry Date</option>
                 <option value="exitAt">Exit Date</option>
@@ -142,7 +144,7 @@ export default function TradesPage() {
               <Select
                 value={filters.order}
                 onChange={(e) => setFilter("order", e.target.value)}
-                className="py-1 text-xs w-20"
+                className="py-1 text-xs"
               >
                 <option value="desc">Desc</option>
                 <option value="asc">Asc</option>

@@ -167,7 +167,7 @@ export default function LogTradePage() {
             <CardHeader>
               <CardTitle>Instrument</CardTitle>
             </CardHeader>
-            <CardBody className="grid grid-cols-2 gap-4">
+            <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="ticker">Ticker *</Label>
                 <Input
@@ -243,7 +243,7 @@ export default function LogTradePage() {
             <CardHeader>
               <CardTitle>Execution</CardTitle>
             </CardHeader>
-            <CardBody className="grid grid-cols-2 gap-4">
+            <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="col-span-2">
                 <Label>Currency</Label>
                 <div className="flex gap-2 mt-1">
@@ -372,7 +372,7 @@ export default function LogTradePage() {
             <CardHeader>
               <CardTitle>Risk Management</CardTitle>
             </CardHeader>
-            <CardBody className="grid grid-cols-2 gap-4">
+            <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="stopLoss">Stop Loss</Label>
                 <Input

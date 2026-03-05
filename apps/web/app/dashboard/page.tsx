@@ -151,7 +151,7 @@ function RecentTrades() {
                   "Ticker",
                   "Dir",
                   "Type",
-                  "Entry",
+                  "Entry Time",
                   "Entry",
                   "Exit",
                   "P&L",
