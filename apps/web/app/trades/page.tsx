@@ -21,16 +21,16 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { TradeFilters } from "@/lib/queries";
 
 const COLS = [
-  "",
-  "Ticker",
-  "Dir",
-  "Type",
-  "Entry Time",
-  "Entry",
-  "Exit",
-  "P&L",
-  "Result",
-  "-",
+  { label: "", className: "" },
+  { label: "Ticker", className: "" },
+  { label: "Dir", className: "hidden sm:table-cell" },
+  { label: "Type", className: "hidden sm:table-cell" },
+  { label: "Entry Time", className: "hidden sm:table-cell" },
+  { label: "Entry", className: "" },
+  { label: "Exit", className: "" },
+  { label: "P&L", className: "hidden sm:table-cell" },
+  { label: "Result", className: "" },
+  { label: "", className: "" },
 ];
 
 export default function TradesPage() {
@@ -270,12 +270,12 @@ export default function TradesPage() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-terminal-border">
-                      {COLS.map((h) => (
+                      {COLS.map((col, i) => (
                         <th
-                          key={h}
-                          className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium whitespace-nowrap"
+                          key={i}
+                          className={`px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium whitespace-nowrap ${col.className}`}
                         >
-                          {h}
+                          {col.label}
                         </th>
                       ))}
                     </tr>

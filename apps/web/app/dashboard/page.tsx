@@ -148,21 +148,21 @@ function RecentTrades() {
               <tr className="border-b border-terminal-border">
                 <th className="px-3 py-2 w-4" />
                 {[
-                  "Ticker",
-                  "Dir",
-                  "Type",
-                  "Entry Time",
-                  "Entry",
-                  "Exit",
-                  "P&L",
-                  "Result",
-                  "",
-                ].map((h) => (
+                  { label: "Ticker", className: "" },
+                  { label: "Dir", className: "hidden sm:table-cell" },
+                  { label: "Type", className: "hidden sm:table-cell" },
+                  { label: "Entry Time", className: "hidden sm:table-cell" },
+                  { label: "Entry", className: "" },
+                  { label: "Exit", className: "" },
+                  { label: "P&L", className: "hidden sm:table-cell" },
+                  { label: "Result", className: "" },
+                  { label: "", className: "" },
+                ].map((col, i) => (
                   <th
-                    key={h}
-                    className="px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium"
+                    key={i}
+                    className={`px-3 py-2 text-left text-[10px] tracking-widest uppercase text-terminal-dim font-medium ${col.className}`}
                   >
-                    {h}
+                    {col.label}
                   </th>
                 ))}
               </tr>

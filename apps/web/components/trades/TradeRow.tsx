@@ -145,15 +145,15 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           <span className="text-terminal-bright font-semibold tracking-wider">{trade.ticker}</span>
           <span className="ml-2 text-[10px] text-terminal-dim">{trade.assetClass}</span>
         </td>
-        <td className="px-3 py-2.5">
+        <td className="hidden sm:table-cell px-3 py-2.5">
           <Badge variant={trade.direction === "LONG" ? "profit" : "loss"}>
             {trade.direction}
           </Badge>
         </td>
-        <td className="px-3 py-2.5">
+        <td className="hidden sm:table-cell px-3 py-2.5">
           <Badge variant="dim">{trade.tradeType}</Badge>
         </td>
-        <td className="px-3 py-2.5 text-xs tabular-nums text-terminal-dim">
+        <td className="hidden sm:table-cell px-3 py-2.5 text-xs tabular-nums text-terminal-dim">
           {fmtDateTime(trade.entryAt)}
         </td>
         <td className="px-3 py-2.5 text-xs tabular-nums">
@@ -166,7 +166,7 @@ export default function TradeRow({ trade }: { trade: Trade }) {
             </span>
           )}
         </td>
-        <td className={`px-3 py-2.5 text-xs tabular-nums font-medium ${pnl === null ? "text-terminal-dim" : pnl > 0 ? "text-profit" : "text-loss"}`}>
+        <td className={`hidden sm:table-cell px-3 py-2.5 text-xs tabular-nums font-medium ${pnl === null ? "text-terminal-dim" : pnl > 0 ? "text-profit" : "text-loss"}`}>
           {pnl === null ? <Badge variant="accent">OPEN</Badge> : (
             <span className={pnl > 0 ? "glow-profit" : ""}>
               {fmtCurrency(pnl)}
@@ -194,6 +194,29 @@ export default function TradeRow({ trade }: { trade: Trade }) {
         <tr className="bg-terminal-muted/30">
           <td colSpan={10} className="px-6 py-3">
             <div className="grid grid-cols-4 gap-4 text-xs">
+              <div className="sm:hidden">
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Direction</span>
+                <Badge variant={trade.direction === "LONG" ? "profit" : "loss"}>{trade.direction}</Badge>
+              </div>
+              <div className="sm:hidden">
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Type</span>
+                <Badge variant="dim">{trade.tradeType}</Badge>
+              </div>
+              <div className="sm:hidden">
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Entry Time</span>
+                <span className="text-terminal-dim tabular-nums">{fmtDateTime(trade.entryAt)}</span>
+              </div>
+              <div className="sm:hidden">
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">P&L</span>
+                {pnl === null ? (
+                  <Badge variant="accent">OPEN</Badge>
+                ) : (
+                  <span className={pnl > 0 ? "text-profit" : "text-loss"}>
+                    {fmtCurrency(pnl)}
+                    <span className="text-[10px] ml-1 opacity-70">{fmtPercent(Number(trade.pnlPercent))}</span>
+                  </span>
+                )}
+              </div>
               <div>
                 <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Quantity</span>
                 <span className="text-terminal-text tabular-nums">{Number(trade.quantity)}</span>
