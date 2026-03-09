@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/lib/queryProvider";
 import { AuthProvider } from "@/lib/auth";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -20,13 +21,18 @@ export const metadata: Metadata = {
   description: "Professional trade journal and analytics",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={`${ibmPlexMono.variable} ${dmSans.variable}`}>
       <body className="bg-terminal-bg text-terminal-text font-mono antialiased">
         <QueryProvider>
           <AuthProvider>
             {children}
+            <SpeedInsights />
           </AuthProvider>
         </QueryProvider>
       </body>
