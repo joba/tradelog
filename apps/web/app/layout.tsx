@@ -4,6 +4,7 @@ import "./globals.css";
 import { QueryProvider } from "@/lib/queryProvider";
 import { AuthProvider } from "@/lib/auth";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <SpeedInsights />
+            <Analytics />
           </AuthProvider>
         </QueryProvider>
       </body>
