@@ -39,16 +39,19 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
     fetch("https://api.frankfurter.app/latest?from=USD&to=SEK")
       .then((r) => r.json())
       .then((d) => setFxRate(d.rates.SEK as number))
-      .catch(() => {/* user can type manually */})
+      .catch(() => {
+        /* user can type manually */
+      })
       .finally(() => setFetchingRate(false));
   }, [isUsd]);
 
   const mutation = useMutation({
-    mutationFn: () => tradesApi.close(trade.id, {
-      exitPrice: Number(exitPrice),
-      fees: Number(fees),
-      ...(isUsd && fxRate !== null ? { fxRate } : {}),
-    }),
+    mutationFn: () =>
+      tradesApi.close(trade.id, {
+        exitPrice: Number(exitPrice),
+        fees: Number(fees),
+        ...(isUsd && fxRate !== null ? { fxRate } : {}),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["trades"] });
       queryClient.invalidateQueries({ queryKey: ["stats"] });
@@ -59,7 +62,10 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
 
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); mutation.mutate(); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
       className="flex items-center gap-2 mt-2 p-2 bg-terminal-muted/50 rounded-sm border border-terminal-border"
       onClick={(e) => e.stopPropagation()}
     >
@@ -79,7 +85,9 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
         />
       </div>
       <div>
-        <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">Fees</div>
+        <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">
+          Fees
+        </div>
         <input
           type="number"
           step="any"
@@ -91,7 +99,9 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
       </div>
       {isUsd && (
         <div>
-          <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">USD/SEK Rate</div>
+          <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">
+            USD/SEK Rate
+          </div>
           <input
             type="number"
             step="0.0001"
@@ -103,10 +113,19 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
         </div>
       )}
       <div className="flex items-end gap-1 pb-0.5 mt-4">
-        <Button type="submit" disabled={mutation.isPending} variant="primary" className="py-1 text-[10px]">
+        <Button
+          type="submit"
+          disabled={mutation.isPending}
+          variant="primary"
+          className="py-1 text-[10px]"
+        >
           {mutation.isPending ? "..." : "Close"}
         </Button>
-        <button type="button" onClick={onClose} className="p-1 text-terminal-dim hover:text-terminal-text">
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 text-terminal-dim hover:text-terminal-text"
+        >
           <X size={12} />
         </button>
       </div>
@@ -136,14 +155,19 @@ export default function TradeRow({ trade }: { trade: Trade }) {
         onClick={() => setExpanded((v) => !v)}
       >
         <td className="px-3 py-2.5 w-4">
-          {expanded
-            ? <ChevronDown size={11} className="text-terminal-dim" />
-            : <ChevronRight size={11} className="text-terminal-dim" />
-          }
+          {expanded ? (
+            <ChevronDown size={11} className="text-terminal-dim" />
+          ) : (
+            <ChevronRight size={11} className="text-terminal-dim" />
+          )}
         </td>
         <td className="px-3 py-2.5">
-          <span className="text-terminal-bright font-semibold tracking-wider">{trade.ticker}</span>
-          <span className="ml-2 text-[10px] text-terminal-dim">{trade.assetClass}</span>
+          <span className="text-terminal-bright font-semibold tracking-wider">
+            {trade.ticker}
+          </span>
+          <span className="ml-2 text-[10px] text-terminal-dim">
+            {trade.assetClass}
+          </span>
         </td>
         <td className="hidden sm:table-cell px-3 py-2.5">
           <Badge variant={trade.direction === "LONG" ? "profit" : "loss"}>
@@ -151,7 +175,7 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           </Badge>
         </td>
         <td className="hidden sm:table-cell px-3 py-2.5">
-          <Badge variant="dim">{trade.tradeType}</Badge>
+          <Badge variant="dim">{pnl === null ? "-" : trade.tradeType}</Badge>
         </td>
         <td className="hidden sm:table-cell px-3 py-2.5 text-xs tabular-nums text-terminal-dim">
           {fmtDateTime(trade.entryAt)}
@@ -160,29 +184,51 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           {fmtPrice(Number(trade.entryPrice), trade.currency)}
         </td>
         <td className="px-3 py-2.5 text-xs tabular-nums">
-          {trade.exitPrice ? fmtPrice(Number(trade.exitPrice), trade.currency) : (
-            <span className="text-accent text-[10px] cursor-pointer hover:underline" onClick={(e) => { e.stopPropagation(); setClosing(true); }}>
+          {trade.exitPrice ? (
+            fmtPrice(Number(trade.exitPrice), trade.currency)
+          ) : (
+            <span
+              className="text-accent text-[10px] cursor-pointer hover:underline"
+              onClick={(e) => {
+                e.stopPropagation();
+                setClosing(true);
+              }}
+            >
               Close ›
             </span>
           )}
         </td>
-        <td className={`hidden sm:table-cell px-3 py-2.5 text-xs tabular-nums font-medium ${pnl === null ? "text-terminal-dim" : pnl > 0 ? "text-profit" : "text-loss"}`}>
-          {pnl === null ? <Badge variant="accent">OPEN</Badge> : (
+        <td
+          className={`hidden sm:table-cell px-3 py-2.5 text-xs tabular-nums font-medium ${pnl === null ? "text-terminal-dim" : pnl > 0 ? "text-profit" : "text-loss"}`}
+        >
+          {pnl === null ? (
+            <Badge variant="accent">OPEN</Badge>
+          ) : (
             <span className={pnl > 0 ? "glow-profit" : ""}>
               {fmtCurrency(pnl)}
-              <span className="text-[10px] ml-1 opacity-70">{fmtPercent(Number(trade.pnlPercent))}</span>
+              <span className="text-[10px] ml-1 opacity-70">
+                {fmtPercent(Number(trade.pnlPercent))}
+              </span>
             </span>
           )}
         </td>
         <td className="px-3 py-2.5">
-          {trade.outcome
-            ? <Badge variant={outcomeVariant(trade.outcome) as "profit" | "loss" | "dim"}>{trade.outcome}</Badge>
-            : null
-          }
+          {trade.outcome ? (
+            <Badge
+              variant={
+                outcomeVariant(trade.outcome) as "profit" | "loss" | "dim"
+              }
+            >
+              {trade.outcome}
+            </Badge>
+          ) : null}
         </td>
         <td className="px-3 py-2.5">
           <button
-            onClick={(e) => { e.stopPropagation(); if (confirm("Delete this trade?")) deleteMutation.mutate(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm("Delete this trade?")) deleteMutation.mutate();
+            }}
             className="p-1 text-terminal-dim hover:text-loss transition-colors"
           >
             <Trash2 size={11} />
@@ -195,63 +241,116 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           <td colSpan={10} className="px-6 py-3">
             <div className="grid grid-cols-4 gap-4 text-xs">
               <div className="sm:hidden">
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Direction</span>
-                <Badge variant={trade.direction === "LONG" ? "profit" : "loss"}>{trade.direction}</Badge>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Direction
+                </span>
+                <Badge variant={trade.direction === "LONG" ? "profit" : "loss"}>
+                  {trade.direction}
+                </Badge>
               </div>
               <div className="sm:hidden">
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Type</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Type
+                </span>
                 <Badge variant="dim">{trade.tradeType}</Badge>
               </div>
               <div className="sm:hidden">
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Entry Time</span>
-                <span className="text-terminal-dim tabular-nums">{fmtDateTime(trade.entryAt)}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Entry Time
+                </span>
+                <span className="text-terminal-dim tabular-nums">
+                  {fmtDateTime(trade.entryAt)}
+                </span>
               </div>
               <div className="sm:hidden">
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">P&L</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  P&L
+                </span>
                 {pnl === null ? (
                   <Badge variant="accent">OPEN</Badge>
                 ) : (
                   <span className={pnl > 0 ? "text-profit" : "text-loss"}>
                     {fmtCurrency(pnl)}
-                    <span className="text-[10px] ml-1 opacity-70">{fmtPercent(Number(trade.pnlPercent))}</span>
+                    <span className="text-[10px] ml-1 opacity-70">
+                      {fmtPercent(Number(trade.pnlPercent))}
+                    </span>
                   </span>
                 )}
               </div>
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Quantity</span>
-                <span className="text-terminal-text tabular-nums">{Number(trade.quantity)}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Quantity
+                </span>
+                <span className="text-terminal-text tabular-nums">
+                  {Number(trade.quantity)}
+                </span>
               </div>
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Stop Loss</span>
-                <span className="text-loss tabular-nums">{trade.stopLoss ? fmtPrice(Number(trade.stopLoss), trade.currency) : "—"}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Stop Loss
+                </span>
+                <span className="text-loss tabular-nums">
+                  {trade.stopLoss
+                    ? fmtPrice(Number(trade.stopLoss), trade.currency)
+                    : "—"}
+                </span>
               </div>
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Take Profit</span>
-                <span className="text-profit tabular-nums">{trade.takeProfit ? fmtPrice(Number(trade.takeProfit), trade.currency) : "—"}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Take Profit
+                </span>
+                <span className="text-profit tabular-nums">
+                  {trade.takeProfit
+                    ? fmtPrice(Number(trade.takeProfit), trade.currency)
+                    : "—"}
+                </span>
               </div>
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">R:R</span>
-                <span className="text-terminal-text tabular-nums">{trade.riskReward ? `${Number(trade.riskReward).toFixed(2)}R` : "—"}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  R:R
+                </span>
+                <span className="text-terminal-text tabular-nums">
+                  {trade.riskReward
+                    ? `${Number(trade.riskReward).toFixed(2)}R`
+                    : "—"}
+                </span>
               </div>
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Fees</span>
-                <span className="text-terminal-dim tabular-nums">{fmtPrice(Number(trade.fees), trade.currency)}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Fees
+                </span>
+                <span className="text-terminal-dim tabular-nums">
+                  {fmtPrice(Number(trade.fees), trade.currency)}
+                </span>
               </div>
               {trade.currency === "USD" && (
                 <div>
-                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Currency</span>
+                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                    Currency
+                  </span>
                   <span className="text-terminal-text tabular-nums">
-                    USD {trade.fxRate ? <span className="text-terminal-dim">({Number(trade.fxRate).toFixed(4)} kr)</span> : null}
+                    USD{" "}
+                    {trade.fxRate ? (
+                      <span className="text-terminal-dim">
+                        ({Number(trade.fxRate).toFixed(4)} kr)
+                      </span>
+                    ) : null}
                   </span>
                 </div>
               )}
               <div>
-                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Exit</span>
-                <span className="text-terminal-dim tabular-nums">{fmtDateTime(trade.exitAt)}</span>
+                <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                  Exit
+                </span>
+                <span className="text-terminal-dim tabular-nums">
+                  {fmtDateTime(trade.exitAt)}
+                </span>
               </div>
               {tags.length > 0 && (
                 <div className="col-span-2">
-                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Tags</span>
+                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                    Tags
+                  </span>
                   <div className="flex gap-1 flex-wrap">
                     {tags.map((tag) => (
                       <span
@@ -260,7 +359,9 @@ export default function TradeRow({ trade }: { trade: Trade }) {
                         style={{
                           borderColor: tag.color ? `${tag.color}40` : "#1c2230",
                           color: tag.color || "#5a6a82",
-                          background: tag.color ? `${tag.color}10` : "transparent",
+                          background: tag.color
+                            ? `${tag.color}10`
+                            : "transparent",
                         }}
                       >
                         {tag.name}
@@ -271,8 +372,12 @@ export default function TradeRow({ trade }: { trade: Trade }) {
               )}
               {trade.notes && (
                 <div className="col-span-4">
-                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">Notes</span>
-                  <span className="text-terminal-text text-xs">{trade.notes}</span>
+                  <span className="text-[10px] text-terminal-dim uppercase tracking-widest block mb-1">
+                    Notes
+                  </span>
+                  <span className="text-terminal-text text-xs">
+                    {trade.notes}
+                  </span>
                 </div>
               )}
             </div>
