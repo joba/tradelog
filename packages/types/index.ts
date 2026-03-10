@@ -4,7 +4,8 @@ export type AssetClass =
   | "CRYPTO"
   | "FOREX"
   | "FUTURES"
-  | "ETF";
+  | "ETF"
+  | "ETP";
 export type Direction = "LONG" | "SHORT";
 export type TradeType = "DAY" | "SWING";
 export type TradeStatus = "OPEN" | "CLOSED";

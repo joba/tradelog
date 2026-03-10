@@ -206,7 +206,7 @@ export default function TradesPage() {
                   className="py-1.5 text-xs"
                 >
                   <option value="">All</option>
-                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map(
+                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"].map(
                     (a) => (
                       <option key={a} value={a}>
                         {a}

@@ -11,7 +11,7 @@ router.use(authenticate);
 
 const tradeBodyValidators = [
   body("ticker").trim().toUpperCase().notEmpty(),
-  body("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
+  body("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"]),
   body("direction").isIn(["LONG", "SHORT"]),
   body("quantity").isFloat({ gt: 0 }),
   body("entryPrice").isFloat({ gt: 0 }),
@@ -37,7 +37,7 @@ router.get(
     query("status").optional().isIn(["OPEN", "CLOSED"]),
     query("direction").optional().isIn(["LONG", "SHORT"]),
     query("tradeType").optional().isIn(["DAY", "SWING"]),
-    query("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
+    query("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"]),
     query("ticker").optional().trim().toUpperCase(),
     query("from").optional().isISO8601(),
     query("to").optional().isISO8601(),

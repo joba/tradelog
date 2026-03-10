@@ -182,7 +182,7 @@ export default function LogTradePage() {
                   value={form.assetClass}
                   onChange={(e) => set("assetClass", e.target.value)}
                 >
-                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"].map(
+                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"].map(
                     (a) => (
                       <option key={a} value={a}>
                         {a}
