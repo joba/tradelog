@@ -18,7 +18,7 @@ import {
   Badge,
 } from "@/components/ui";
 import { CheckCircle, RefreshCw } from "lucide-react";
-import { AssetClass, Direction, TradeType } from "@/types";
+import { AssetClass, Direction } from "@/types";
 
 async function fetchUsdSekRate(): Promise<number> {
   const res = await fetch("https://api.frankfurter.app/latest?from=USD&to=SEK");
@@ -43,7 +43,6 @@ export default function LogTradePage() {
     ticker: "",
     assetClass: "STOCK" as AssetClass,
     direction: "LONG" as Direction,
-    tradeType: "DAY" as TradeType,
     quantity: "",
     entryPrice: "",
     exitPrice: "",
@@ -88,7 +87,6 @@ export default function LogTradePage() {
         ticker: form.ticker.toUpperCase(),
         assetClass: form.assetClass,
         direction: form.direction,
-        tradeType: form.tradeType,
         quantity: Number(form.quantity),
         entryPrice: Number(form.entryPrice),
         exitPrice: form.exitPrice ? Number(form.exitPrice) : undefined,
@@ -141,9 +139,7 @@ export default function LogTradePage() {
           <div className="text-terminal-bright font-medium tracking-wide">
             Trade Logged Successfully
           </div>
-          <div className="text-xs text-terminal-dim">
-            Redirecting to trade log...
-          </div>
+          <div className="text-xs text-terminal-dim">Redirecting...</div>
         </div>
       </AppLayout>
     );
@@ -216,25 +212,6 @@ export default function LogTradePage() {
                   ))}
                 </div>
               </div>
-              <div>
-                <Label>Trade Type *</Label>
-                <div className="flex gap-2">
-                  {["DAY", "SWING"].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => set("tradeType", t)}
-                      className={`flex-1 py-2 text-xs border rounded-sm transition-all ${
-                        form.tradeType === t
-                          ? "bg-accent/10 border-accent/40 text-accent"
-                          : "bg-terminal-muted border-terminal-border text-terminal-dim hover:text-terminal-text"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </CardBody>
           </Card>
 
@@ -264,7 +241,9 @@ export default function LogTradePage() {
                   {currency === "USD" && (
                     <div className="flex items-center gap-2 ml-2 text-xs text-terminal-dim">
                       {fetchingRate ? (
-                        <span className="text-terminal-dim/60">Fetching rate…</span>
+                        <span className="text-terminal-dim/60">
+                          Fetching rate…
+                        </span>
                       ) : rateError ? (
                         <div className="flex items-center gap-1">
                           <span className="text-loss/80">{rateError}</span>
@@ -279,7 +258,13 @@ export default function LogTradePage() {
                         </div>
                       ) : fxRate !== null ? (
                         <div className="flex items-center gap-1.5">
-                          <span>1 USD = <span className="text-terminal-text tabular-nums">{fxRate.toFixed(4)}</span> SEK</span>
+                          <span>
+                            1 USD ={" "}
+                            <span className="text-terminal-text tabular-nums">
+                              {fxRate.toFixed(4)}
+                            </span>{" "}
+                            SEK
+                          </span>
                           <button
                             type="button"
                             onClick={refreshRate}
@@ -435,7 +420,7 @@ export default function LogTradePage() {
           {/* Notes */}
           <Card>
             <CardHeader>
-              <CardTitle>Notes & Rationale</CardTitle>
+              <CardTitle>Notes</CardTitle>
             </CardHeader>
             <CardBody>
               <Textarea

@@ -13,7 +13,6 @@ const tradeBodyValidators = [
   body("ticker").trim().toUpperCase().notEmpty(),
   body("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
   body("direction").isIn(["LONG", "SHORT"]),
-  body("tradeType").isIn(["DAY", "SWING"]),
   body("quantity").isFloat({ gt: 0 }),
   body("entryPrice").isFloat({ gt: 0 }),
   body("exitPrice").optional({ nullable: true }).isFloat({ gt: 0 }),
@@ -128,7 +127,7 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const {
-      ticker, assetClass, direction, tradeType,
+      ticker, assetClass, direction,
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds = [],
@@ -136,6 +135,17 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
     } = req.body;
 
     const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
+
+    // Auto-compute tradeType if closing immediately
+    const isSameDay = (d1, d2) =>
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
+
+    const exitDate = exitAt ? new Date(exitAt) : (exitPrice ? new Date() : null);
+    const tradeType = exitDate
+      ? (isSameDay(new Date(entryAt), exitDate) ? "DAY" : "SWING")
+      : "SWING";
 
     // Compute derived fields if closing immediately
     const derived = exitPrice
@@ -180,7 +190,7 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
     if (!existing) return res.status(404).json({ error: "Trade not found" });
 
     const {
-      ticker, assetClass, direction, tradeType,
+      ticker, assetClass, direction,
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds,
@@ -192,6 +202,17 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
     const derived = exitPrice
       ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit, fxRate: effectiveFxRate })
       : { pnl: null, pnlPercent: null, riskReward: null, outcome: null };
+
+    // Auto-compute tradeType based on entry/exit dates
+    const isSameDayPut = (d1, d2) =>
+      d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
+
+    const putExitDate = exitAt ? new Date(exitAt) : (exitPrice ? new Date() : null);
+    const tradeType = putExitDate
+      ? (isSameDayPut(new Date(entryAt), putExitDate) ? "DAY" : "SWING")
+      : "SWING";
 
     const trade = await prisma.trade.update({
       where: { id: req.params.id },
@@ -263,14 +284,22 @@ router.patch(
         fxRate: effectiveFxRate,
       });
 
+      const closeExitAt = exitAt ? new Date(exitAt) : new Date();
+      const isSameDayClose = (d1, d2) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+      const closeTradeType = isSameDayClose(new Date(trade.entryAt), closeExitAt) ? "DAY" : "SWING";
+
       const updated = await prisma.trade.update({
         where: { id: req.params.id },
         data: {
           exitPrice: Number(exitPrice),
-          exitAt: exitAt ? new Date(exitAt) : new Date(),
+          exitAt: closeExitAt,
           fees: totalFees,
           fxRate: trade.currency === "USD" ? effectiveFxRate : null,
           status: "CLOSED",
+          tradeType: closeTradeType,
           ...derived,
         },
         include: { tags: { include: { tag: true } } },

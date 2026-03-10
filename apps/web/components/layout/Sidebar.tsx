@@ -16,7 +16,7 @@ import {
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/trades", label: "Trade Log", icon: List },
+  { href: "/trades", label: "Trades", icon: List },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/log-trade", label: "Log Trade", icon: PlusCircle },
 ];
