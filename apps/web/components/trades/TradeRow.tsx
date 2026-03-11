@@ -191,6 +191,7 @@ export default function TradeRow({ trade }: { trade: Trade }) {
               className="text-accent text-[10px] cursor-pointer hover:underline"
               onClick={(e) => {
                 e.stopPropagation();
+                setExpanded(true);
                 setClosing(true);
               }}
             >
