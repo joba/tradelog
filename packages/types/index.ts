@@ -40,6 +40,7 @@ export interface Trade {
   outcome: Outcome | null;
   currency: Currency;
   fxRate: number | null;
+  leverage: number | null;
   notes: string | null;
   screenshot: string | null;
   createdAt: string;

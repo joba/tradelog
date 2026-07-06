@@ -27,6 +27,7 @@ const tradeBodyValidators = [
   body("tagIds.*").optional().isUUID(),
   body("currency").optional().isIn(["SEK", "USD"]),
   body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
+  body("leverage").optional({ nullable: true }).isFloat({ min: 0 }),
 ];
 
 // ─── GET /api/trades ──────────────────────────────────────────
@@ -131,7 +132,7 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds = [],
-      currency = "SEK", fxRate,
+      currency = "SEK", fxRate, leverage,
     } = req.body;
 
     const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
@@ -162,6 +163,7 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
         notes, screenshot,
         currency,
         fxRate: currency === "USD" ? effectiveFxRate : null,
+        leverage: leverage != null ? Number(leverage) : null,
         status: exitPrice ? "CLOSED" : "OPEN",
         ...derived,
         tags: {
@@ -194,7 +196,7 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
       quantity, entryPrice, exitPrice, entryAt, exitAt,
       stopLoss, takeProfit, fees = 0,
       notes, screenshot, tagIds,
-      currency = "SEK", fxRate,
+      currency = "SEK", fxRate, leverage,
     } = req.body;
 
     const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
@@ -225,6 +227,7 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
         notes, screenshot,
         currency,
         fxRate: currency === "USD" ? effectiveFxRate : null,
+        leverage: leverage != null ? Number(leverage) : null,
         status: exitPrice ? "CLOSED" : "OPEN",
         ...derived,
         // Replace tags if provided

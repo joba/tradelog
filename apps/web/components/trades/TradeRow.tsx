@@ -167,6 +167,9 @@ export default function TradeRow({ trade }: { trade: Trade }) {
           </span>
           <span className="ml-2 text-[10px] text-terminal-dim">
             {trade.assetClass}
+            {trade.leverage != null && (
+              <span className="ml-1 text-accent/70">x{Number(trade.leverage)}</span>
+            )}
           </span>
         </td>
         <td className="hidden sm:table-cell px-3 py-2.5">

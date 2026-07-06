@@ -41,7 +41,8 @@ export default function LogTradePage() {
 
   const [form, setForm] = useState({
     ticker: "",
-    assetClass: "STOCK" as AssetClass,
+    leverage: "",
+    assetClass: "ETP" as AssetClass,
     direction: "LONG" as Direction,
     quantity: "",
     entryPrice: "",
@@ -99,6 +100,7 @@ export default function LogTradePage() {
         tagIds: selectedTags,
         currency,
         fxRate: currency === "USD" ? (fxRate ?? undefined) : undefined,
+        leverage: form.leverage ? Number(form.leverage) : undefined,
       };
       return tradesApi.create(payload).then((r) => r.data);
     },
@@ -170,9 +172,21 @@ export default function LogTradePage() {
                   id="ticker"
                   value={form.ticker}
                   onChange={(e) => set("ticker", e.target.value.toUpperCase())}
-                  placeholder="AAPL"
+                  placeholder="GOLD"
                   required
                   className="uppercase"
+                />
+              </div>
+              <div>
+                <Label htmlFor="leverage">Leverage</Label>
+                <Input
+                  id="leverage"
+                  type="number"
+                  step="any"
+                  min="1"
+                  value={form.leverage}
+                  onChange={(e) => set("leverage", e.target.value)}
+                  placeholder="10"
                 />
               </div>
               <div>
@@ -182,13 +196,19 @@ export default function LogTradePage() {
                   value={form.assetClass}
                   onChange={(e) => set("assetClass", e.target.value)}
                 >
-                  {["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"].map(
-                    (a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ),
-                  )}
+                  {[
+                    "STOCK",
+                    "OPTION",
+                    "CRYPTO",
+                    "FOREX",
+                    "FUTURES",
+                    "ETF",
+                    "ETP",
+                  ].map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
                 </Select>
               </div>
               <div>
