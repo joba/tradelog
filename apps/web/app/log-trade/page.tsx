@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { tradesApi, tagsApi } from "@/lib/queries";
+import { toLocalDatetimeInput } from "@/lib/utils";
 import AppLayout from "@/components/layout/AppLayout";
 import {
   Card,
@@ -25,11 +26,6 @@ async function fetchUsdSekRate(): Promise<number> {
   const data = await res.json();
   return data.rates.SEK as number;
 }
-
-const toLocalDatetimeInput = (date: Date) => {
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
 
 export default function LogTradePage() {
   const router = useRouter();

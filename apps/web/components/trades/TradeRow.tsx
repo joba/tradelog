@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { tradesApi } from "@/lib/queries";
-import { fmtCurrency, fmtDateTime, fmtPercent } from "@/lib/utils";
+import { fmtCurrency, fmtDateTime, fmtPercent, toLocalDatetimeInput } from "@/lib/utils";
 import { Badge, Button } from "@/components/ui";
-import { Trash2, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Trash2, ChevronDown, ChevronRight, X, Pencil } from "lucide-react";
 import type { Trade } from "@tradelog/types";
 
 function fmtPrice(value: number, currency: string): string {
@@ -133,9 +133,151 @@ function CloseTradeForm({ trade, onClose }: CloseFormProps) {
   );
 }
 
+function EditField({
+  label,
+  value,
+  onChange,
+  type = "number",
+  className = "w-24",
+  required = false,
+}: {
+  label: ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  className?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <div className="text-[9px] text-terminal-dim tracking-widest uppercase mb-1">
+        {label}
+      </div>
+      <input
+        type={type}
+        step={type === "number" ? "any" : undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`terminal-input px-2 py-1 text-xs rounded-sm ${className}`}
+        required={required}
+      />
+    </div>
+  );
+}
+
+const numStr = (v: number | string | null | undefined) =>
+  v === null || v === undefined ? "" : String(Number(v));
+
+function EditTradeForm({ trade, onClose }: CloseFormProps) {
+  const queryClient = useQueryClient();
+  const isUsd = trade.currency === "USD";
+  const [form, setForm] = useState({
+    quantity: numStr(trade.quantity),
+    entryPrice: numStr(trade.entryPrice),
+    exitPrice: numStr(trade.exitPrice),
+    fees: numStr(trade.fees),
+    stopLoss: numStr(trade.stopLoss),
+    takeProfit: numStr(trade.takeProfit),
+    fxRate: numStr(trade.fxRate),
+    entryAt: toLocalDatetimeInput(new Date(trade.entryAt)),
+    exitAt: trade.exitAt ? toLocalDatetimeInput(new Date(trade.exitAt)) : "",
+  });
+  const set = (k: keyof typeof form) => (v: string) =>
+    setForm((f) => ({ ...f, [k]: v }));
+  const optNum = (v: string) => (v === "" ? null : Number(v));
+
+  const mutation = useMutation({
+    // PUT replaces the whole trade, so send every field — unedited ones as-is
+    mutationFn: () =>
+      tradesApi.update(trade.id, {
+        ticker: trade.ticker,
+        assetClass: trade.assetClass,
+        direction: trade.direction,
+        currency: trade.currency,
+        leverage: trade.leverage !== null ? Number(trade.leverage) : null,
+        notes: trade.notes ?? undefined,
+        screenshot: trade.screenshot,
+        quantity: Number(form.quantity),
+        entryPrice: Number(form.entryPrice),
+        exitPrice: optNum(form.exitPrice),
+        fees: Number(form.fees || 0),
+        stopLoss: optNum(form.stopLoss),
+        takeProfit: optNum(form.takeProfit),
+        fxRate: isUsd ? optNum(form.fxRate) : null,
+        entryAt: new Date(form.entryAt).toISOString(),
+        exitAt: form.exitAt ? new Date(form.exitAt).toISOString() : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["trades"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+      queryClient.invalidateQueries({ queryKey: ["equity-curve"] });
+      onClose();
+    },
+  });
+
+  const usd = isUsd && <span className="text-accent">USD</span>;
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        mutation.mutate();
+      }}
+      className="flex flex-wrap items-end gap-2 mt-2 p-2 bg-terminal-muted/50 rounded-sm border border-terminal-border"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <EditField label="Quantity" value={form.quantity} onChange={set("quantity")} required />
+      <EditField label={<>Entry {usd}</>} value={form.entryPrice} onChange={set("entryPrice")} required />
+      <EditField label={<>Exit {usd}</>} value={form.exitPrice} onChange={set("exitPrice")} />
+      <EditField label="Fees" value={form.fees} onChange={set("fees")} className="w-20" />
+      <EditField label="Stop Loss" value={form.stopLoss} onChange={set("stopLoss")} />
+      <EditField label="Take Profit" value={form.takeProfit} onChange={set("takeProfit")} />
+      {isUsd && (
+        <EditField label="USD/SEK Rate" value={form.fxRate} onChange={set("fxRate")} className="w-20" />
+      )}
+      <EditField
+        label="Entry Time"
+        type="datetime-local"
+        value={form.entryAt}
+        onChange={set("entryAt")}
+        className="w-44"
+        required
+      />
+      <EditField
+        label="Exit Time"
+        type="datetime-local"
+        value={form.exitAt}
+        onChange={set("exitAt")}
+        className="w-44"
+      />
+      <div className="flex items-end gap-1 pb-0.5">
+        <Button
+          type="submit"
+          disabled={mutation.isPending}
+          variant="primary"
+          className="py-1 text-[10px]"
+        >
+          {mutation.isPending ? "..." : "Save"}
+        </Button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 text-terminal-dim hover:text-terminal-text"
+        >
+          <X size={12} />
+        </button>
+      </div>
+      {mutation.isError && (
+        <div className="w-full text-[10px] text-loss">Could not save trade.</div>
+      )}
+    </form>
+  );
+}
+
 export default function TradeRow({ trade }: { trade: Trade }) {
   const [expanded, setExpanded] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [editing, setEditing] = useState(false);
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
@@ -195,6 +337,7 @@ export default function TradeRow({ trade }: { trade: Trade }) {
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded(true);
+                setEditing(false);
                 setClosing(true);
               }}
             >
@@ -227,7 +370,19 @@ export default function TradeRow({ trade }: { trade: Trade }) {
             </Badge>
           ) : null}
         </td>
-        <td className="px-3 py-2.5">
+        <td className="px-3 py-2.5 whitespace-nowrap">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(true);
+              setClosing(false);
+              setEditing(true);
+            }}
+            className="p-1 text-terminal-dim hover:text-accent transition-colors"
+            title="Edit trade"
+          >
+            <Pencil size={11} />
+          </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -387,6 +542,9 @@ export default function TradeRow({ trade }: { trade: Trade }) {
             </div>
             {closing && (
               <CloseTradeForm trade={trade} onClose={() => setClosing(false)} />
+            )}
+            {editing && (
+              <EditTradeForm trade={trade} onClose={() => setEditing(false)} />
             )}
           </td>
         </tr>

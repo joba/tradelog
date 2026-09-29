@@ -13,6 +13,7 @@
     "build": "npm run build --workspace=apps/api && npm run build --workspace=apps/web",
     "db:migrate": "npm run db:migrate --workspace=apps/api",
     "db:seed": "npm run db:seed --workspace=apps/api",
+    "db:recompute": "npm run db:recompute --workspace=apps/api --",
     "db:studio": "npm run db:studio --workspace=apps/api"
   }
 }

@@ -30,7 +30,7 @@ const commonFilters = [
   query("tradeType").optional().isIn(["DAY", "SWING"]),
   query("assetClass")
     .optional()
-    .isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF"]),
+    .isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"]),
 ];
 
 // ─── GET /api/stats/summary ───────────────────────────────────
@@ -172,16 +172,19 @@ router.get("/by-ticker", commonFilters, async (req, res, next) => {
       orderBy: { _sum: { pnl: "desc" } },
     });
 
-    // Get win counts per ticker (requires separate query)
-    const winCounts = await prisma.trade.groupBy({
-      by: ["ticker"],
-      where: { ...where, outcome: "WIN" },
+    // Get win/loss counts per ticker (requires separate query)
+    const outcomeCounts = await prisma.trade.groupBy({
+      by: ["ticker", "outcome"],
+      where: { ...where, outcome: { in: ["WIN", "LOSS"] } },
       _count: { id: true },
     });
 
-    const winMap = Object.fromEntries(
-      winCounts.map((w) => [w.ticker, w._count.id]),
-    );
+    const winMap = {};
+    const lossMap = {};
+    for (const c of outcomeCounts) {
+      const map = c.outcome === "WIN" ? winMap : lossMap;
+      map[c.ticker] = c._count.id;
+    }
 
     const data = groups.map((g) => {
       const total = g._count.id;
@@ -190,7 +193,7 @@ router.get("/by-ticker", commonFilters, async (req, res, next) => {
         ticker: g.ticker,
         totalTrades: total,
         wins,
-        losses: total - wins,
+        losses: lossMap[g.ticker] || 0,
         winRate: +((wins / total) * 100).toFixed(2),
         totalPnl: +Number(g._sum.pnl).toFixed(2),
         avgPnl: +Number(g._avg.pnl).toFixed(2),
@@ -242,6 +245,7 @@ router.get("/by-tag", commonFilters, async (req, res, next) => {
     const data = Object.values(tagMap).map(({ id, name, color, trades }) => {
       const total = trades.length;
       const wins = trades.filter((t) => t.outcome === "WIN").length;
+      const losses = trades.filter((t) => t.outcome === "LOSS").length;
       const totalPnl = trades.reduce((a, t) => a + Number(t.pnl), 0);
       const rrValues = trades
         .filter((t) => t.riskReward)
@@ -252,7 +256,7 @@ router.get("/by-tag", commonFilters, async (req, res, next) => {
         color,
         totalTrades: total,
         wins,
-        losses: total - wins,
+        losses,
         winRate: +((wins / total) * 100).toFixed(2),
         totalPnl: +totalPnl.toFixed(2),
         avgPnl: +(totalPnl / total).toFixed(2),

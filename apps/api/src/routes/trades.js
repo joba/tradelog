@@ -211,7 +211,10 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
       d1.getMonth() === d2.getMonth() &&
       d1.getDate() === d2.getDate();
 
-    const putExitDate = exitAt ? new Date(exitAt) : (exitPrice ? new Date() : null);
+    // Keep the stored exit time if none was sent, so edits don't move it to "now"
+    const putExitDate = exitPrice
+      ? (exitAt ? new Date(exitAt) : (existing.exitAt ?? new Date()))
+      : null;
     const tradeType = putExitDate
       ? (isSameDayPut(new Date(entryAt), putExitDate) ? "DAY" : "SWING")
       : "SWING";
@@ -222,7 +225,7 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
         ticker, assetClass, direction, tradeType,
         quantity, entryPrice, exitPrice,
         entryAt: new Date(entryAt),
-        exitAt: exitAt ? new Date(exitAt) : null,
+        exitAt: putExitDate,
         stopLoss, takeProfit, fees: Number(fees),
         notes, screenshot,
         currency,
