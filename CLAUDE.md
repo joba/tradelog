@@ -47,11 +47,13 @@ Uses ES modules (`"type": "module"`). Express app structure:
 - `src/routes/` — `auth.js`, `trades.js`, `stats.js`, `tags.js`
 - `src/middleware/authenticate.js` — JWT bearer token validation; sets `req.userId`
 - `src/lib/prisma.js` — Prisma client singleton
-- `src/lib/tradeUtils.js` — `computePnl()` — calculates pnl, pnlPercent, riskReward, outcome when a trade closes
+- `src/lib/tradeUtils.js` — `summarizeExecutions()` derives all trade totals and P&L from its executions; `recalcTrade()` stores them. Call `recalcTrade` inside the same transaction after any execution change
 
 All routes under `/api/*`. Stats routes only count `status: "CLOSED"` trades. The `authenticate` middleware is applied router-wide (not per-route).
 
-**PnL computation note:** `computePnl` always uses `(exit - entry) * qty` regardless of direction — this is intentional ("optimized for bull/bear assets"). `outcome` (WIN/LOSS/BREAKEVEN) is based on post-fee P&L; `riskReward` calculation still uses direction-aware logic.
+**PnL computation note:** P&L always uses `(exit - entry) * qty` regardless of direction — this is intentional ("optimized for bull/bear assets"). It uses the average-cost method (entry fees add to cost basis, exit fees reduce proceeds). Each execution has its own USD→SEK `fxRate`, so SEK `pnl` includes currency moves; `fxPnl` is the currency part. `outcome` (WIN/LOSS/BREAKEVEN) is set only when CLOSED, based on post-fee SEK P&L; `riskReward` still uses direction-aware logic.
+
+`npm run db:recompute` (add `-- --dry` to preview) re-derives every trade from its executions — run it after changing the formula.
 
 ### Web (`apps/web`)
 
@@ -70,10 +72,11 @@ Single `index.ts` exporting all interfaces: `Trade`, `Summary`, `EquityPoint`, `
 
 ### Data Model Key Points
 
-- `Trade` stores derived fields (`pnl`, `pnlPercent`, `riskReward`, `outcome`) computed at close time for query performance
-- `exitPrice: null` = open trade; `status: "OPEN"` / `"CLOSED"` is set accordingly
+- `Execution` rows (ENTRY/EXIT fills with price, quantity, fees, fxRate) are the source of truth for a trade
+- `Trade` stores fields derived from them for query performance: `quantity` (total entered), `entryPrice`/`exitPrice` (weighted averages), `fees`, `entryAt`/`exitAt`, `fxRate`/`exitFxRate`, `tradeType`, `status`, `pnl`, `fxPnl`, `pnlPercent`, `riskReward`, `outcome`. Never write these directly — change executions and call `recalcTrade`
+- `status` is `CLOSED` once exited quantity equals entered quantity; a partly sold trade is `OPEN` with a realised `pnl`
+- `PUT /trades/:id` only updates trade-level fields (ticker, direction, stop loss, …); fills are edited via `/trades/:id/executions`
 - Tags are user-scoped (`userId` on `Tag`) and linked via `TradeTag` join table
-- `Execution` model exists for scaling in/out (partial fills) but is not yet surfaced in the UI
 
 ### Git Branch Strategy
 

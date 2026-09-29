@@ -3,6 +3,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { recalcTrade } from "../src/lib/tradeUtils.js";
 
 const prisma = new PrismaClient();
 
@@ -36,25 +37,27 @@ async function main() {
   ];
 
   for (const t of trades) {
-    const { tagIds, ...tradeData } = t;
-    const rawPnl = t.direction === "LONG"
-      ? (t.exitPrice - t.entryPrice) * t.quantity
-      : (t.entryPrice - t.exitPrice) * t.quantity;
-    const pnl = rawPnl - t.fees;
-    const outcome = pnl > 0 ? "WIN" : pnl < 0 ? "LOSS" : "BREAKEVEN";
+    const { tagIds, quantity, entryPrice, exitPrice, entryAt, exitAt, fees, ...tradeData } = t;
 
-    await prisma.trade.create({
+    // Fills are the source of truth; recalcTrade derives pnl, outcome, etc.
+    const trade = await prisma.trade.create({
       data: {
         userId: user.id,
         assetClass: "STOCK",
         ...tradeData,
-        status: "CLOSED",
-        pnl: pnl.toFixed(8),
-        pnlPercent: ((rawPnl / (t.entryPrice * t.quantity)) * 100).toFixed(4),
-        outcome,
+        quantity,
+        entryPrice,
+        entryAt,
         tags: { create: tagIds.map((tagId) => ({ tagId })) },
+        executions: {
+          create: [
+            { type: "ENTRY", price: entryPrice, quantity, fees: 0, executedAt: entryAt },
+            { type: "EXIT", price: exitPrice, quantity, fees, executedAt: exitAt },
+          ],
+        },
       },
     });
+    await recalcTrade(prisma, trade.id);
   }
 
   console.log(`✅ Seeded user: demo@tradejournal.com / password123`);

@@ -1,7 +1,7 @@
 import api from "./api";
 import type {
   Trade, PaginatedResponse, Summary, EquityPoint,
-  TickerStat, TagStat, TimeStats, Tag, User,
+  TickerStat, TagStat, TimeStats, Tag, User, ExecutionType,
 } from "@tradelog/types";
 
 // ─── Auth ─────────────────────────────────────────────────────
@@ -21,6 +21,11 @@ export type TradeFilters = {
   sort?: string; order?: string;
 };
 
+export type ExecutionInput = {
+  type: ExecutionType; price: number; quantity: number;
+  fees?: number; fxRate?: number | null; executedAt: string;
+};
+
 export const tradesApi = {
   list: (params?: TradeFilters) =>
     api.get<PaginatedResponse<Trade>>("/trades", { params }),
@@ -29,8 +34,14 @@ export const tradesApi = {
     api.post<Trade>("/trades", data),
   update: (id: string, data: Partial<Trade> & { tagIds?: string[] }) =>
     api.put<Trade>(`/trades/${id}`, data),
-  close: (id: string, data: { exitPrice: number; exitAt?: string; fees?: number; fxRate?: number }) =>
+  close: (id: string, data: { exitPrice: number; exitAt?: string; quantity?: number; fees?: number; fxRate?: number }) =>
     api.patch<Trade>(`/trades/${id}/close`, data),
+  addExecution: (id: string, data: ExecutionInput) =>
+    api.post<Trade>(`/trades/${id}/executions`, data),
+  updateExecution: (id: string, executionId: string, data: ExecutionInput) =>
+    api.put<Trade>(`/trades/${id}/executions/${executionId}`, data),
+  deleteExecution: (id: string, executionId: string) =>
+    api.delete<Trade>(`/trades/${id}/executions/${executionId}`),
   delete: (id: string) => api.delete(`/trades/${id}`),
 };
 

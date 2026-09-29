@@ -2,33 +2,65 @@ import { Router } from "express";
 import { body, query, param, validationResult } from "express-validator";
 import prisma from "../lib/prisma.js";
 import { authenticate } from "../middleware/authenticate.js";
-import { computePnl } from "../lib/tradeUtils.js";
+import { recalcTrade } from "../lib/tradeUtils.js";
 
 const router = Router();
 router.use(authenticate);
 
 // ─── Validation ───────────────────────────────────────────────
 
-const tradeBodyValidators = [
-  body("ticker").trim().toUpperCase().notEmpty(),
-  body("assetClass").optional().isIn(["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"]),
-  body("direction").isIn(["LONG", "SHORT"]),
+const ASSET_CLASSES = ["STOCK", "OPTION", "CRYPTO", "FOREX", "FUTURES", "ETF", "ETP"];
+
+// Trade-level fields that are not derived from executions
+const tradeMetaValidators = (required) => {
+  const req = (chain) => (required ? chain : chain.optional());
+  return [
+    req(body("ticker")).trim().toUpperCase().notEmpty(),
+    body("assetClass").optional().isIn(ASSET_CLASSES),
+    req(body("direction")).isIn(["LONG", "SHORT"]),
+    body("stopLoss").optional({ nullable: true }).isFloat({ gt: 0 }),
+    body("takeProfit").optional({ nullable: true }).isFloat({ gt: 0 }),
+    body("notes").optional({ nullable: true }).trim().isLength({ max: 2000 }),
+    body("screenshot").optional({ nullable: true }).isURL(),
+    body("tagIds").optional().isArray(),
+    body("tagIds.*").optional().isUUID(),
+    body("currency").optional().isIn(["SEK", "USD"]),
+    body("leverage").optional({ nullable: true }).isFloat({ min: 0 }),
+  ];
+};
+
+const createTradeValidators = [
+  ...tradeMetaValidators(true),
   body("quantity").isFloat({ gt: 0 }),
   body("entryPrice").isFloat({ gt: 0 }),
   body("exitPrice").optional({ nullable: true }).isFloat({ gt: 0 }),
   body("entryAt").isISO8601(),
   body("exitAt").optional({ nullable: true }).isISO8601(),
-  body("stopLoss").optional({ nullable: true }).isFloat({ gt: 0 }),
-  body("takeProfit").optional({ nullable: true }).isFloat({ gt: 0 }),
   body("fees").optional().isFloat({ min: 0 }),
-  body("notes").optional().trim().isLength({ max: 2000 }),
-  body("screenshot").optional({ nullable: true }).isURL(),
-  body("tagIds").optional().isArray(),
-  body("tagIds.*").optional().isUUID(),
-  body("currency").optional().isIn(["SEK", "USD"]),
   body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
-  body("leverage").optional({ nullable: true }).isFloat({ min: 0 }),
+  body("exitFxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
 ];
+
+const executionValidators = [
+  body("type").isIn(["ENTRY", "EXIT"]),
+  body("price").isFloat({ gt: 0 }),
+  body("quantity").isFloat({ gt: 0 }),
+  body("fees").optional().isFloat({ min: 0 }),
+  body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
+  body("executedAt").isISO8601(),
+];
+
+const tradeInclude = {
+  tags: { include: { tag: true } },
+  executions: { orderBy: { executedAt: "asc" } },
+};
+
+// Only keys that were actually sent, so PUT can be a partial update
+const pick = (obj, keys) =>
+  Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, obj[k]]));
+
+const findOwnTrade = (db, id, userId) =>
+  db.trade.findFirst({ where: { id, userId }, include: { executions: true } });
 
 // ─── GET /api/trades ──────────────────────────────────────────
 
@@ -79,7 +111,7 @@ router.get(
       const [trades, total] = await Promise.all([
         prisma.trade.findMany({
           where,
-          include: { tags: { include: { tag: true } } },
+          include: tradeInclude,
           orderBy: { [sort]: order },
           skip: (Number(page) - 1) * Number(limit),
           take: Number(limit),
@@ -108,10 +140,7 @@ router.get("/:id", param("id").isUUID(), async (req, res, next) => {
   try {
     const trade = await prisma.trade.findFirst({
       where: { id: req.params.id, userId: req.userId },
-      include: {
-        tags: { include: { tag: true } },
-        executions: { orderBy: { executedAt: "asc" } },
-      },
+      include: tradeInclude,
     });
     if (!trade) return res.status(404).json({ error: "Trade not found" });
     res.json(trade);
@@ -121,56 +150,59 @@ router.get("/:id", param("id").isUUID(), async (req, res, next) => {
 });
 
 // ─── POST /api/trades ─────────────────────────────────────────
+// Creates the trade with an ENTRY fill, plus an EXIT fill if exitPrice is given
 
-router.post("/", tradeBodyValidators, async (req, res, next) => {
+router.post("/", createTradeValidators, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const {
-      ticker, assetClass, direction,
-      quantity, entryPrice, exitPrice, entryAt, exitAt,
-      stopLoss, takeProfit, fees = 0,
-      notes, screenshot, tagIds = [],
-      currency = "SEK", fxRate, leverage,
+      direction, quantity, entryPrice, exitPrice, entryAt, exitAt,
+      fees = 0, tagIds = [], currency = "SEK", fxRate, exitFxRate, leverage,
     } = req.body;
+    const isUsd = currency === "USD";
 
-    const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
-
-    // Auto-compute tradeType if closing immediately
-    const isSameDay = (d1, d2) =>
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate();
-
-    const exitDate = exitAt ? new Date(exitAt) : (exitPrice ? new Date() : null);
-    const tradeType = exitDate
-      ? (isSameDay(new Date(entryAt), exitDate) ? "DAY" : "SWING")
-      : "SWING";
-
-    // Compute derived fields if closing immediately
-    const derived = exitPrice
-      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit, fxRate: effectiveFxRate })
-      : {};
-
-    const trade = await prisma.trade.create({
-      data: {
-        userId: req.userId,
-        ticker, assetClass, direction, tradeType,
-        quantity, entryPrice, exitPrice, entryAt,
-        exitAt: exitAt ? new Date(exitAt) : undefined,
-        stopLoss, takeProfit, fees: Number(fees),
-        notes, screenshot,
-        currency,
-        fxRate: currency === "USD" ? effectiveFxRate : null,
-        leverage: leverage != null ? Number(leverage) : null,
-        status: exitPrice ? "CLOSED" : "OPEN",
-        ...derived,
-        tags: {
-          create: tagIds.map((tagId) => ({ tagId })),
+    const trade = await prisma.$transaction(async (tx) => {
+      const created = await tx.trade.create({
+        data: {
+          ...pick(req.body, ["ticker", "assetClass", "stopLoss", "takeProfit", "notes", "screenshot"]),
+          userId: req.userId,
+          direction,
+          currency,
+          leverage: leverage != null ? Number(leverage) : null,
+          // Placeholders — recalcTrade derives these from the fills below
+          tradeType: "SWING",
+          quantity,
+          entryPrice,
+          entryAt: new Date(entryAt),
+          tags: { create: tagIds.map((tagId) => ({ tagId })) },
+          executions: {
+            create: [
+              {
+                type: "ENTRY",
+                price: entryPrice,
+                quantity,
+                // Fees go on the exit when closing immediately, like the close form
+                fees: exitPrice ? 0 : Number(fees),
+                fxRate: isUsd ? fxRate || null : null,
+                executedAt: new Date(entryAt),
+              },
+              ...(exitPrice
+                ? [{
+                    type: "EXIT",
+                    price: exitPrice,
+                    quantity,
+                    fees: Number(fees),
+                    fxRate: isUsd ? exitFxRate || fxRate || null : null,
+                    executedAt: exitAt ? new Date(exitAt) : new Date(),
+                  }]
+                : []),
+            ],
+          },
         },
-      },
-      include: { tags: { include: { tag: true } } },
+      });
+      return recalcTrade(tx, created.id, tradeInclude);
     });
 
     res.status(201).json(trade);
@@ -180,70 +212,41 @@ router.post("/", tradeBodyValidators, async (req, res, next) => {
 });
 
 // ─── PUT /api/trades/:id ──────────────────────────────────────
+// Updates trade-level fields. Prices, quantities, fees, times and fx rates
+// live on the executions — edit those via /executions.
 
-router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, res, next) => {
+router.put("/:id", [param("id").isUUID(), ...tradeMetaValidators(false)], async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const existing = await prisma.trade.findFirst({
-      where: { id: req.params.id, userId: req.userId },
-    });
-    if (!existing) return res.status(404).json({ error: "Trade not found" });
+    const { tagIds, leverage } = req.body;
 
-    const {
-      ticker, assetClass, direction,
-      quantity, entryPrice, exitPrice, entryAt, exitAt,
-      stopLoss, takeProfit, fees = 0,
-      notes, screenshot, tagIds,
-      currency = "SEK", fxRate, leverage,
-    } = req.body;
+    const trade = await prisma.$transaction(async (tx) => {
+      const existing = await findOwnTrade(tx, req.params.id, req.userId);
+      if (!existing) return null;
 
-    const effectiveFxRate = currency === "USD" ? (fxRate || 1) : 1;
-
-    const derived = exitPrice
-      ? computePnl({ direction, quantity, entryPrice, exitPrice, fees, stopLoss, takeProfit, fxRate: effectiveFxRate })
-      : { pnl: null, pnlPercent: null, riskReward: null, outcome: null };
-
-    // Auto-compute tradeType based on entry/exit dates
-    const isSameDayPut = (d1, d2) =>
-      d1.getFullYear() === d2.getFullYear() &&
-      d1.getMonth() === d2.getMonth() &&
-      d1.getDate() === d2.getDate();
-
-    // Keep the stored exit time if none was sent, so edits don't move it to "now"
-    const putExitDate = exitPrice
-      ? (exitAt ? new Date(exitAt) : (existing.exitAt ?? new Date()))
-      : null;
-    const tradeType = putExitDate
-      ? (isSameDayPut(new Date(entryAt), putExitDate) ? "DAY" : "SWING")
-      : "SWING";
-
-    const trade = await prisma.trade.update({
-      where: { id: req.params.id },
-      data: {
-        ticker, assetClass, direction, tradeType,
-        quantity, entryPrice, exitPrice,
-        entryAt: new Date(entryAt),
-        exitAt: putExitDate,
-        stopLoss, takeProfit, fees: Number(fees),
-        notes, screenshot,
-        currency,
-        fxRate: currency === "USD" ? effectiveFxRate : null,
-        leverage: leverage != null ? Number(leverage) : null,
-        status: exitPrice ? "CLOSED" : "OPEN",
-        ...derived,
-        // Replace tags if provided
-        ...(tagIds !== undefined && {
-          tags: {
-            deleteMany: {},
-            create: tagIds.map((tagId) => ({ tagId })),
-          },
-        }),
-      },
-      include: { tags: { include: { tag: true } } },
+      await tx.trade.update({
+        where: { id: existing.id },
+        data: {
+          ...pick(req.body, [
+            "ticker", "assetClass", "direction", "stopLoss", "takeProfit",
+            "notes", "screenshot", "currency",
+          ]),
+          ...(leverage !== undefined && { leverage: leverage != null ? Number(leverage) : null }),
+          ...(tagIds !== undefined && {
+            tags: {
+              deleteMany: {},
+              create: tagIds.map((tagId) => ({ tagId })),
+            },
+          }),
+        },
+      });
+      // Direction, stop loss and currency affect derived fields
+      return recalcTrade(tx, existing.id, tradeInclude);
     });
 
+    if (!trade) return res.status(404).json({ error: "Trade not found" });
     res.json(trade);
   } catch (err) {
     next(err);
@@ -251,7 +254,8 @@ router.put("/:id", [param("id").isUUID(), ...tradeBodyValidators], async (req, r
 });
 
 // ─── PATCH /api/trades/:id/close ─────────────────────────────
-// Convenience endpoint — just close a trade with exit price/time
+// Convenience endpoint — adds an EXIT fill. Sells the whole open position
+// unless a quantity is given (partial exit).
 
 router.patch(
   "/:id/close",
@@ -259,6 +263,7 @@ router.patch(
     param("id").isUUID(),
     body("exitPrice").isFloat({ gt: 0 }),
     body("exitAt").optional().isISO8601(),
+    body("quantity").optional().isFloat({ gt: 0 }),
     body("fees").optional().isFloat({ min: 0 }),
     body("fxRate").optional({ nullable: true }).isFloat({ gt: 0 }),
   ],
@@ -267,51 +272,122 @@ router.patch(
       const errors = validationResult(req);
       if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-      const trade = await prisma.trade.findFirst({
-        where: { id: req.params.id, userId: req.userId },
+      const { exitPrice, exitAt, quantity, fees = 0, fxRate } = req.body;
+
+      const trade = await prisma.$transaction(async (tx) => {
+        const existing = await findOwnTrade(tx, req.params.id, req.userId);
+        if (!existing) return null;
+        if (existing.status === "CLOSED") {
+          const err = new Error("Trade already closed");
+          err.status = 400;
+          throw err;
+        }
+
+        const openQty = existing.executions.reduce(
+          (a, e) => a + (e.type === "ENTRY" ? 1 : -1) * Number(e.quantity),
+          0,
+        );
+
+        await tx.execution.create({
+          data: {
+            tradeId: existing.id,
+            type: "EXIT",
+            price: Number(exitPrice),
+            quantity: quantity !== undefined ? Number(quantity) : openQty,
+            fees: Number(fees),
+            fxRate: existing.currency === "USD" ? fxRate || null : null,
+            executedAt: exitAt ? new Date(exitAt) : new Date(),
+          },
+        });
+        return recalcTrade(tx, existing.id, tradeInclude);
       });
+
       if (!trade) return res.status(404).json({ error: "Trade not found" });
-      if (trade.status === "CLOSED") return res.status(400).json({ error: "Trade already closed" });
+      res.json(trade);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-      const { exitPrice, exitAt, fees, fxRate } = req.body;
-      const totalFees = fees !== undefined ? Number(fees) : Number(trade.fees);
+// ─── Executions (fills) ───────────────────────────────────────
+// Every change recomputes the trade; an inconsistent set of fills
+// (e.g. selling more than is held) is rejected and rolled back.
 
-      // For USD trades use the provided close-time rate; for SEK trades fxRate is always 1
-      const effectiveFxRate = trade.currency === "USD" ? (fxRate || 1) : 1;
+const executionData = ({ type, price, quantity, fees = 0, fxRate, executedAt }, currency) => ({
+  type,
+  price: Number(price),
+  quantity: Number(quantity),
+  fees: Number(fees),
+  fxRate: currency === "USD" ? fxRate || null : null,
+  executedAt: new Date(executedAt),
+});
 
-      const derived = computePnl({
-        direction: trade.direction,
-        quantity: Number(trade.quantity),
-        entryPrice: Number(trade.entryPrice),
-        exitPrice: Number(exitPrice),
-        fees: totalFees,
-        stopLoss: trade.stopLoss ? Number(trade.stopLoss) : null,
-        takeProfit: trade.takeProfit ? Number(trade.takeProfit) : null,
-        fxRate: effectiveFxRate,
+router.post(
+  "/:id/executions",
+  [param("id").isUUID(), ...executionValidators],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const trade = await prisma.$transaction(async (tx) => {
+        const existing = await findOwnTrade(tx, req.params.id, req.userId);
+        if (!existing) return null;
+        await tx.execution.create({
+          data: { tradeId: existing.id, ...executionData(req.body, existing.currency) },
+        });
+        return recalcTrade(tx, existing.id, tradeInclude);
       });
 
-      const closeExitAt = exitAt ? new Date(exitAt) : new Date();
-      const isSameDayClose = (d1, d2) =>
-        d1.getFullYear() === d2.getFullYear() &&
-        d1.getMonth() === d2.getMonth() &&
-        d1.getDate() === d2.getDate();
-      const closeTradeType = isSameDayClose(new Date(trade.entryAt), closeExitAt) ? "DAY" : "SWING";
+      if (!trade) return res.status(404).json({ error: "Trade not found" });
+      res.status(201).json(trade);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
-      const updated = await prisma.trade.update({
-        where: { id: req.params.id },
-        data: {
-          exitPrice: Number(exitPrice),
-          exitAt: closeExitAt,
-          fees: totalFees,
-          fxRate: trade.currency === "USD" ? effectiveFxRate : null,
-          status: "CLOSED",
-          tradeType: closeTradeType,
-          ...derived,
-        },
-        include: { tags: { include: { tag: true } } },
+router.put(
+  "/:id/executions/:executionId",
+  [param("id").isUUID(), param("executionId").isUUID(), ...executionValidators],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+      const trade = await prisma.$transaction(async (tx) => {
+        const existing = await findOwnTrade(tx, req.params.id, req.userId);
+        if (!existing?.executions.some((e) => e.id === req.params.executionId)) return null;
+        await tx.execution.update({
+          where: { id: req.params.executionId },
+          data: executionData(req.body, existing.currency),
+        });
+        return recalcTrade(tx, existing.id, tradeInclude);
       });
 
-      res.json(updated);
+      if (!trade) return res.status(404).json({ error: "Execution not found" });
+      res.json(trade);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.delete(
+  "/:id/executions/:executionId",
+  [param("id").isUUID(), param("executionId").isUUID()],
+  async (req, res, next) => {
+    try {
+      const trade = await prisma.$transaction(async (tx) => {
+        const existing = await findOwnTrade(tx, req.params.id, req.userId);
+        if (!existing?.executions.some((e) => e.id === req.params.executionId)) return null;
+        await tx.execution.delete({ where: { id: req.params.executionId } });
+        return recalcTrade(tx, existing.id, tradeInclude);
+      });
+
+      if (!trade) return res.status(404).json({ error: "Execution not found" });
+      res.json(trade);
     } catch (err) {
       next(err);
     }

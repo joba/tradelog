@@ -19,7 +19,7 @@ import {
   Badge,
 } from "@/components/ui";
 import { CheckCircle, RefreshCw } from "lucide-react";
-import { AssetClass, Direction } from "@/types";
+import type { AssetClass, Direction } from "@tradelog/types";
 
 async function fetchUsdSekRate(): Promise<number> {
   const res = await fetch("https://api.frankfurter.app/latest?from=USD&to=SEK");
@@ -43,6 +43,7 @@ export default function LogTradePage() {
     quantity: "",
     entryPrice: "",
     exitPrice: "",
+    exitFxRate: "",
     entryAt: toLocalDatetimeInput(new Date()),
     exitAt: "",
     stopLoss: "",
@@ -96,6 +97,8 @@ export default function LogTradePage() {
         tagIds: selectedTags,
         currency,
         fxRate: currency === "USD" ? (fxRate ?? undefined) : undefined,
+        exitFxRate:
+          currency === "USD" && form.exitFxRate ? Number(form.exitFxRate) : undefined,
         leverage: form.leverage ? Number(form.leverage) : undefined,
       };
       return tradesApi.create(payload).then((r) => r.data);
@@ -346,6 +349,24 @@ export default function LogTradePage() {
                   placeholder="0.00"
                 />
               </div>
+              {currency === "USD" && form.exitPrice && (
+                <div>
+                  <Label htmlFor="exitFxRate">
+                    Exit USD/SEK Rate{" "}
+                    <span className="text-terminal-dim/60 normal-case">
+                      (blank = same as entry)
+                    </span>
+                  </Label>
+                  <Input
+                    id="exitFxRate"
+                    type="number"
+                    step="0.0001"
+                    value={form.exitFxRate}
+                    onChange={(e) => set("exitFxRate", e.target.value)}
+                    placeholder={fxRate?.toFixed(4) ?? "10.52"}
+                  />
+                </div>
+              )}
               <div>
                 <Label htmlFor="entryAt">Entry Time *</Label>
                 <Input

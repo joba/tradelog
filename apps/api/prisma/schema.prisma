@@ -46,10 +46,10 @@ model Trade {
   direction   Direction   // LONG or SHORT
   tradeType   TradeType   // DAY or SWING
 
-  // Position sizing
+  // Position sizing — rolled up from executions (total entered qty, weighted avg prices)
   quantity    Decimal     @db.Decimal(18, 8)  // supports crypto fractional shares
   entryPrice  Decimal     @db.Decimal(18, 8)
-  exitPrice   Decimal?    @db.Decimal(18, 8)  // null = trade still open
+  exitPrice   Decimal?    @db.Decimal(18, 8)  // null = nothing sold yet
 
   // Timing
   entryAt     DateTime
@@ -62,8 +62,9 @@ model Trade {
   // Costs
   fees        Decimal     @default(0) @db.Decimal(18, 8)
 
-  // Derived fields (stored for query performance)
-  pnl         Decimal?    @db.Decimal(18, 8)  // computed on close
+  // Derived fields (stored for query performance, recomputed from executions)
+  pnl         Decimal?    @db.Decimal(18, 8)  // realised SEK P&L; final once CLOSED
+  fxPnl       Decimal?    @db.Decimal(18, 8)  // part of pnl from USD/SEK moves; null for SEK trades
   pnlPercent  Decimal?    @db.Decimal(8, 4)
   riskReward  Decimal?    @db.Decimal(8, 4)   // actual R:R at close
 
@@ -73,7 +74,8 @@ model Trade {
 
   // Currency
   currency    Currency    @default(SEK)      // "SEK" | "USD"
-  fxRate      Decimal?    @db.Decimal(10, 4)   // USD→SEK rate at trade time; null for SEK trades
+  fxRate      Decimal?    @db.Decimal(10, 4)   // avg USD→SEK rate of entries; null for SEK trades
+  exitFxRate  Decimal?    @db.Decimal(10, 4)   // avg USD→SEK rate of exits
   leverage    Decimal?    @db.Decimal(8, 2)    // e.g. 10 for X10 ETP; null for non-leveraged instruments
 
   // Meta
@@ -85,7 +87,7 @@ model Trade {
   // Relations
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags        TradeTag[]
-  executions  Execution[] // for scaling in/out (advanced)
+  executions  Execution[] // fills — source of truth for sizing, prices and P&L
 
   @@index([userId])
   @@index([ticker])
@@ -95,8 +97,8 @@ model Trade {
 }
 
 // ─────────────────────────────────────────
-// EXECUTIONS (scaling in/out — optional)
-// Allows logging partial fills for a single trade
+// EXECUTIONS
+// Every buy/sell fill of a trade. Trade totals and P&L are derived from these.
 // ─────────────────────────────────────────
 
 model Execution {
@@ -105,7 +107,8 @@ model Execution {
   type      ExecutionType   // ENTRY or EXIT
   price     Decimal         @db.Decimal(18, 8)
   quantity  Decimal         @db.Decimal(18, 8)
-  fees      Decimal         @default(0) @db.Decimal(18, 8)
+  fees      Decimal         @default(0) @db.Decimal(18, 8)  // in trade currency
+  fxRate    Decimal?        @db.Decimal(10, 4)  // USD→SEK rate at fill time; null for SEK trades
   executedAt DateTime
 
   trade     Trade           @relation(fields: [tradeId], references: [id], onDelete: Cascade)
